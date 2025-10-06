@@ -160,6 +160,71 @@ export interface Product {
   updatedAt: string;
 }
 
+export enum ProductType {
+  CASH = "Tunai",
+  INSTALLMENT = "Beli Putus",
+  CONSIGNMENT = "Konsinyasi",
+}
+
+export enum PurchaseType {
+  CASH = "Cash",
+  CREDIT = "Hutang",
+}
+
+export enum StockStatus {
+  NORMAL = "Normal",
+  LOW = "Hampir Habis",
+  OVER = "Over Stock",
+  EMPTY = "Habis",
+}
+
+export interface Product {
+  id: string;
+  barcode: string;
+  name: string;
+  categoryId: string;
+  categoryName: string;
+  supplierId: string;
+  supplierName: string;
+  productType: ProductType;
+  purchaseType: PurchaseType;
+  invoiceNo?: string;
+  expiryDate?: string;
+  description?: string;
+  purchasePrice: number; // Harga beli
+  sellingPriceGeneral: number; // Harga jual umum
+  sellingPriceMember: number; // Harga jual anggota
+  points: number; // Point untuk member
+  stock: number;
+  minStock: number;
+  maxStock: number;
+  unit: string; // PCS, Gram, Kg, ml
+  stockStatus: StockStatus;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProductRequest {
+  barcode: string;
+  name: string;
+  categoryId: string;
+  supplierId: string;
+  productType: ProductType;
+  purchaseType: PurchaseType;
+  invoiceNo?: string;
+  expiryDate?: string;
+  description?: string;
+  purchasePrice: number;
+  sellingPriceGeneral: number;
+  sellingPriceMember: number;
+  points: number;
+  stock: number;
+  minStock: number;
+  maxStock: number;
+  unit: string;
+}
+
 // ============================================
 // TRANSACTION (TRANSAKSI)
 // ============================================

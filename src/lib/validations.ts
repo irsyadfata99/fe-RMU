@@ -1,6 +1,7 @@
 // src/lib/validations.ts
 import { z } from "zod";
 import { Gender, TransactionType, UserRole } from "@/types";
+import { ProductType, PurchaseType } from "@/types";
 
 // ============================================
 // MEMBER VALIDATIONS
@@ -35,16 +36,26 @@ export type LoginForm = z.infer<typeof loginSchema>;
 // ============================================
 
 export const productSchema = z.object({
-  sku: z.string().min(3, "SKU minimal 3 karakter").max(50, "SKU maksimal 50 karakter"),
-  name: z.string().min(3, "Nama produk minimal 3 karakter").max(100, "Nama produk maksimal 100 karakter"),
+  // Kolom Kiri
   categoryId: z.string().min(1, "Pilih kategori"),
-  supplierId: z.string().min(1, "Pilih supplier"),
-  purchasePrice: z.number().min(0, "Harga beli harus lebih dari 0"),
-  sellingPrice: z.number().min(0, "Harga jual harus lebih dari 0"),
-  stock: z.number().min(0, "Stok tidak boleh negatif"),
-  minStock: z.number().min(0, "Stok minimal tidak boleh negatif"),
-  maxStock: z.number().min(0, "Stok maksimal tidak boleh negatif"),
+  name: z.string().min(3, "Nama barang minimal 3 karakter").max(100, "Nama barang maksimal 100 karakter"),
+  productType: z.nativeEnum(ProductType, { message: "Pilih jenis barang" }),
+  expiryDate: z.string().optional(),
+  minStock: z.number().min(0, "Stok minimum tidak boleh negatif"),
+  description: z.string().max(255, "Deskripsi maksimal 255 karakter").optional(),
+  sellingPriceGeneral: z.number().min(0, "Harga jual umum harus lebih dari 0"),
+  sellingPriceMember: z.number().min(0, "Harga jual anggota harus lebih dari 0"),
+  points: z.number().min(0, "Point tidak boleh negatif"),
   unit: z.string().min(1, "Satuan harus diisi"),
+
+  // Kolom Kanan
+  supplierId: z.string().min(1, "Pilih supplier"),
+  barcode: z.string().min(3, "Barcode minimal 3 karakter").max(50, "Barcode maksimal 50 karakter"),
+  purchaseType: z.nativeEnum(PurchaseType, { message: "Pilih jenis pembelian" }),
+  invoiceNo: z.string().max(50, "Invoice maksimal 50 karakter").optional(),
+  maxStock: z.number().min(0, "Stok maksimum tidak boleh negatif"),
+  purchasePrice: z.number().min(0, "Harga beli harus lebih dari 0"),
+  stock: z.number().min(0, "Stok tidak boleh negatif"),
 });
 
 export type ProductForm = z.infer<typeof productSchema>;

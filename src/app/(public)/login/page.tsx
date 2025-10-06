@@ -1,5 +1,4 @@
 // src/app/(public)/login/page.tsx
-
 "use client";
 
 import { useState } from "react";
@@ -9,9 +8,8 @@ import { LoginForm } from "@/components/auth/login-form";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginForm as LoginFormType } from "@/lib/validations";
 import { handleApiError } from "@/lib/api";
-import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, KeyRound } from "lucide-react";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -22,10 +20,14 @@ export default function LoginPage() {
 
     try {
       await login(data);
-      toast.success("Login berhasil!");
+      toast.success("Login berhasil!", {
+        description: "Selamat datang di Koperasi POS",
+      });
     } catch (error) {
       const errorMessage = handleApiError(error);
-      toast.error(errorMessage || "Login gagal. Periksa username dan password Anda.");
+      toast.error("Login gagal", {
+        description: errorMessage || "Periksa username dan password Anda.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -39,28 +41,49 @@ export default function LoginPage() {
         <div className="space-y-8">
           {/* Header */}
           <div className="text-center space-y-2">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <KeyRound className="h-8 w-8 text-primary" />
+            </div>
             <h1 className="text-3xl font-bold">Login Dashboard</h1>
-            <p className="text-muted-foreground">Akses sistem Point of Sale Koperasi</p>
+            <p className="text-muted-foreground">Akses sistem Point of Sale Koperasi Yamughni</p>
           </div>
 
-          {/* Demo Credentials Info */}
-          <Alert className="max-w-md mx-auto">
-            <InfoIcon className="h-4 w-4" />
+          {/* Demo Credentials Banner */}
+          <Alert className="max-w-md mx-auto border-primary/50 bg-primary/5">
+            <InfoIcon className="h-4 w-4 text-primary" />
             <AlertDescription>
-              <div className="space-y-1">
-                <p className="font-semibold">Demo Credentials:</p>
-                <p className="text-sm">
-                  Admin: <code className="bg-muted px-1 py-0.5 rounded">admin</code> / <code className="bg-muted px-1 py-0.5 rounded">admin123</code>
-                </p>
-                <p className="text-sm">
-                  Kasir: <code className="bg-muted px-1 py-0.5 rounded">kasir</code> / <code className="bg-muted px-1 py-0.5 rounded">kasir123</code>
-                </p>
+              <div className="space-y-2">
+                <p className="font-semibold text-primary flex items-center gap-1">🔑 Demo Credentials</p>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium w-12">Admin:</span>
+                    <code className="bg-primary/10 px-2 py-0.5 rounded text-xs font-mono">admin</code>
+                    <span className="text-muted-foreground">/</span>
+                    <code className="bg-primary/10 px-2 py-0.5 rounded text-xs font-mono">admin123</code>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium w-12">Kasir:</span>
+                    <code className="bg-primary/10 px-2 py-0.5 rounded text-xs font-mono">kasir</code>
+                    <span className="text-muted-foreground">/</span>
+                    <code className="bg-primary/10 px-2 py-0.5 rounded text-xs font-mono">kasir123</code>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground pt-1">💡 Role Admin memiliki akses penuh, Kasir hanya Dashboard & Transaksi</p>
               </div>
             </AlertDescription>
           </Alert>
 
           {/* Login Form */}
           <LoginForm onSubmit={handleSubmit} isLoading={isLoading} />
+
+          {/* Footer Info */}
+          <div className="text-center max-w-md mx-auto">
+            <p className="text-xs text-muted-foreground">
+              Sistem menggunakan Mock API (MSW) untuk demo.
+              <br />
+              Cek browser console untuk melihat API logs.
+            </p>
+          </div>
         </div>
       </main>
     </div>

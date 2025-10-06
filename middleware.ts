@@ -2,31 +2,69 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+/**
+ * Middleware untuk protected routes
+ * - Redirect ke /login jika belum login
+ * - Redirect ke /dashboard jika sudah login (dari /login)
+ */
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get("auth_token")?.value || getTokenFromLocalStorage(request);
+  const token = request.cookies.get("auth_token")?.value;
   const { pathname } = request.nextUrl;
 
-  // Only check untuk /dashboard routes
-  if (pathname.startsWith("/dashboard") && !token) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Public routes yang tidak perlu auth
+  const publicRoutes = ["/", "/register"];
+  const isPublicRoute = publicRoutes.includes(pathname);
+
+  // Dashboard routes (protected)
+  if (pathname.startsWith("/dashboard")) {
+    if (!token) {
+      console.log("[Middleware] Redirecting to /login - No token");
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname); // Save redirect path
+      return NextResponse.redirect(loginUrl);
+    }
+    // User has token, allow access
+    return NextResponse.next();
   }
 
-  // Redirect dari /login ke /dashboard jika sudah ada token
-  if (pathname === "/login" && token) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  // Login page - redirect to dashboard if already logged in
+  if (pathname === "/login") {
+    if (token) {
+      console.log("[Middleware] Redirecting to /dashboard - Already logged in");
+
+      // Check if there's a redirect parameter
+      const redirectPath = request.nextUrl.searchParams.get("redirect");
+      const dashboardUrl = new URL(redirectPath || "/dashboard", request.url);
+      return NextResponse.redirect(dashboardUrl);
+    }
+    // User not logged in, show login page
+    return NextResponse.next();
   }
 
+  // Logout page - always allow
+  if (pathname === "/logout") {
+    return NextResponse.next();
+  }
+
+  // Public routes - always allow
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  // Default: allow request
   return NextResponse.next();
 }
 
-// Helper to get token from localStorage (for client-side navigation)
-function getTokenFromLocalStorage(request: NextRequest): string | null {
-  // Note: localStorage tidak bisa diakses di middleware
-  // Kita hanya rely on cookie untuk server-side checks
-  // Client-side akan di-handle oleh useAuth hook
-  return null;
-}
-
 export const config = {
-  matcher: ["/dashboard/:path*", "/login"],
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - mockServiceWorker.js (MSW worker)
+     * - public files (images, etc)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|mockServiceWorker.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

@@ -4,16 +4,15 @@ import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get("auth_token")?.value;
-  const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard");
-  const isAuthRoute = request.nextUrl.pathname.startsWith("/login");
+  const { pathname } = request.nextUrl;
 
-  // Redirect to login if accessing protected route without token
-  if (isProtectedRoute && !token) {
+  // Only check untuk /dashboard routes
+  if (pathname.startsWith("/dashboard") && !token) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Redirect to dashboard if accessing login with token
-  if (isAuthRoute && token) {
+  // Redirect dari /login ke /dashboard jika sudah ada token
+  if (pathname === "/login" && token) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

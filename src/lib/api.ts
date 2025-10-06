@@ -104,15 +104,20 @@ export const getAuthToken = (): string | null => {
 export const setAuthToken = (token: string): void => {
   if (typeof window !== "undefined") {
     localStorage.setItem("auth_token", token);
+
+    // Also set as cookie for middleware
+    document.cookie = `auth_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
   }
 };
 
 export const removeAuthToken = (): void => {
   if (typeof window !== "undefined") {
     localStorage.removeItem("auth_token");
+
+    // Remove cookie
+    document.cookie = "auth_token=; path=/; max-age=0";
   }
 };
-
 export const clearAuth = (): void => {
   if (typeof window !== "undefined") {
     localStorage.removeItem("auth_token");

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get("auth_token")?.value;
+  const token = request.cookies.get("auth_token")?.value || getTokenFromLocalStorage(request);
   const { pathname } = request.nextUrl;
 
   // Only check untuk /dashboard routes
@@ -17,6 +17,14 @@ export function middleware(request: NextRequest) {
   }
 
   return NextResponse.next();
+}
+
+// Helper to get token from localStorage (for client-side navigation)
+function getTokenFromLocalStorage(request: NextRequest): string | null {
+  // Note: localStorage tidak bisa diakses di middleware
+  // Kita hanya rely on cookie untuk server-side checks
+  // Client-side akan di-handle oleh useAuth hook
+  return null;
 }
 
 export const config = {

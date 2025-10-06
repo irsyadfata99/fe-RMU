@@ -65,7 +65,7 @@ const UNITS = ["PCS", "Gram", "Kg", "ml", "Liter"];
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -77,12 +77,12 @@ export default function ProductsPage() {
     data: products,
     isLoading: loadingProducts,
     mutate,
-  } = useSWR<Product[]>("/products", (url) => apiClient.get<Product[]>(url));
+  } = useSWR<Product[]>("/products", (url: string) => apiClient.get<Product[]>(url));
   const { data: categories } = useSWR<Category[]>(
     "/products/categories",
-    (url) => apiClient.get<Category[]>(url)
+    (url: string) => apiClient.get<Category[]>(url)
   );
-  const { data: suppliers } = useSWR<Supplier[]>("/products/suppliers", (url) =>
+  const { data: suppliers } = useSWR<Supplier[]>("/products/suppliers", (url: string) =>
     apiClient.get<Supplier[]>(url)
   );
 
@@ -114,7 +114,7 @@ export default function ProductsPage() {
     const matchSearch =
       prod.name.toLowerCase().includes(search.toLowerCase()) ||
       prod.barcode.includes(search);
-    const matchCategory = !categoryFilter || prod.categoryId === categoryFilter;
+    const matchCategory = categoryFilter === "all" || prod.categoryId === categoryFilter;
     return matchSearch && matchCategory;
   });
 
@@ -226,7 +226,7 @@ export default function ProductsPage() {
   };
 
   const getStockStatusBadge = (status: StockStatus) => {
-    const variants: Record<
+    const variants: Record
       StockStatus,
       { variant: "default" | "destructive" | "secondary"; label: string }
     > = {
@@ -334,7 +334,7 @@ export default function ProductsPage() {
                   <SelectValue placeholder="Semua Kategori" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua Kategori</SelectItem>
+                  <SelectItem value="all">Semua Kategori</SelectItem>
                   {categories?.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}
@@ -342,11 +342,11 @@ export default function ProductsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              {categoryFilter && (
+              {categoryFilter !== "all" && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setCategoryFilter("")}
+                  onClick={() => setCategoryFilter("all")}
                 >
                   Reset
                 </Button>
@@ -451,7 +451,7 @@ export default function ProductsPage() {
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              {search || categoryFilter
+              {search || categoryFilter !== "all"
                 ? "Tidak ada produk yang ditemukan"
                 : "Belum ada produk"}
             </div>

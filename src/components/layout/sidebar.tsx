@@ -77,7 +77,7 @@ const menuItems: MenuItem[] = [
       },
       {
         title: "Input Supplier",
-        href: "/dashboard/suppliers",
+        href: "/dashboard/products/suppliers",
         icon: Truck,
         roles: [UserRole.ADMIN],
       },
@@ -114,20 +114,14 @@ const menuItems: MenuItem[] = [
       },
       {
         title: "Transaksi Piutang Member",
-        href: "/dashboard/receivables",
+        href: "/dashboard/transactions/receivables",
         icon: CreditCard,
         roles: [UserRole.ADMIN, UserRole.KASIR],
       },
       {
         title: "Pembayaran Hutang Supplier",
-        href: "/dashboard/payables",
+        href: "/dashboard/transactions/payables",
         icon: Wallet,
-        roles: [UserRole.ADMIN, UserRole.KASIR],
-      },
-      {
-        title: "Stok Barang",
-        href: "/dashboard/products/stock",
-        icon: PackageOpen,
         roles: [UserRole.ADMIN, UserRole.KASIR],
       },
     ],

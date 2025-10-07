@@ -89,7 +89,7 @@ const menuItems: MenuItem[] = [
       },
       {
         title: "Retur ke Supplier",
-        href: "/dashboard/suppliers/returns",
+        href: "/dashboard/products/supplier-returns",
         icon: ArrowLeftRight,
         roles: [UserRole.ADMIN],
       },

@@ -4,59 +4,19 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { Plus, Pencil, Trash2, Search, Package, Filter } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { apiClient, handleApiError } from "@/lib/api";
-import {
-  Product,
-  Category,
-  Supplier,
-  ProductType,
-  PurchaseType,
-  StockStatus,
-} from "@/types";
+import { Product, Category, Supplier, ProductType, PurchaseType, StockStatus } from "@/types";
 import { productSchema, ProductForm } from "@/lib/validations";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -73,18 +33,9 @@ export default function ProductsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch data
-  const {
-    data: products,
-    isLoading: loadingProducts,
-    mutate,
-  } = useSWR<Product[]>("/products", (url: string) => apiClient.get<Product[]>(url));
-  const { data: categories } = useSWR<Category[]>(
-    "/products/categories",
-    (url: string) => apiClient.get<Category[]>(url)
-  );
-  const { data: suppliers } = useSWR<Supplier[]>("/products/suppliers", (url: string) =>
-    apiClient.get<Supplier[]>(url)
-  );
+  const { data: products, isLoading: loadingProducts, mutate } = useSWR<Product[]>("/products", (url) => apiClient.get<Product[]>(url));
+  const { data: categories } = useSWR<Category[]>("/products/categories", (url) => apiClient.get<Category[]>(url));
+  const { data: suppliers } = useSWR<Supplier[]>("/products/suppliers", (url) => apiClient.get<Supplier[]>(url));
 
   const form = useForm<ProductForm>({
     resolver: zodResolver(productSchema),
@@ -111,22 +62,15 @@ export default function ProductsPage() {
 
   // Filter products
   const filteredProducts = products?.filter((prod) => {
-    const matchSearch =
-      prod.name.toLowerCase().includes(search.toLowerCase()) ||
-      prod.barcode.includes(search);
+    const matchSearch = prod.name.toLowerCase().includes(search.toLowerCase()) || prod.barcode.includes(search);
     const matchCategory = categoryFilter === "all" || prod.categoryId === categoryFilter;
     return matchSearch && matchCategory;
   });
 
   // Calculate stats
   const totalProducts = products?.length || 0;
-  const lowStockCount =
-    products?.filter(
-      (p) =>
-        p.stockStatus === StockStatus.LOW || p.stockStatus === StockStatus.EMPTY
-    ).length || 0;
-  const totalValue =
-    products?.reduce((sum, p) => sum + p.stock * p.purchasePrice, 0) || 0;
+  const lowStockCount = products?.filter((p) => p.stockStatus === StockStatus.LOW || p.stockStatus === StockStatus.EMPTY).length || 0;
+  const totalValue = products?.reduce((sum, p) => sum + p.stock * p.purchasePrice, 0) || 0;
 
   // Handle create/edit
   const handleSubmit = async (data: ProductForm) => {
@@ -226,10 +170,7 @@ export default function ProductsPage() {
   };
 
   const getStockStatusBadge = (status: StockStatus) => {
-    const variants: Record
-      StockStatus,
-      { variant: "default" | "destructive" | "secondary"; label: string }
-    > = {
+    const variants: Record<StockStatus, { variant: "default" | "destructive" | "secondary"; label: string }> = {
       [StockStatus.NORMAL]: { variant: "default", label: "Normal" },
       [StockStatus.LOW]: { variant: "secondary", label: "Hampir Habis" },
       [StockStatus.OVER]: { variant: "secondary", label: "Over Stock" },
@@ -237,10 +178,7 @@ export default function ProductsPage() {
     };
     const config = variants[status];
     return (
-      <Badge
-        variant={config.variant}
-        className={status === StockStatus.LOW ? "bg-orange-500" : ""}
-      >
+      <Badge variant={config.variant} className={status === StockStatus.LOW ? "bg-orange-500" : ""}>
         {config.label}
       </Badge>
     );
@@ -252,9 +190,7 @@ export default function ProductsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Input Barang</h1>
-          <p className="text-muted-foreground">
-            Kelola data produk dan inventori koperasi
-          </p>
+          <p className="text-muted-foreground">Kelola data produk dan inventori koperasi</p>
         </div>
         <Button onClick={handleAdd}>
           <Plus className="mr-2 h-4 w-4" />
@@ -300,9 +236,7 @@ export default function ProductsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Nilai Inventori</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(totalValue)}
-                </p>
+                <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
               </div>
             </div>
           </CardContent>
@@ -315,12 +249,7 @@ export default function ProductsPage() {
           <CardContent className="p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Cari produk (nama/barcode)..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+              <Input placeholder="Cari produk (nama/barcode)..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
           </CardContent>
         </Card>
@@ -342,12 +271,8 @@ export default function ProductsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              {categoryFilter !== "all" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCategoryFilter("all")}
-                >
+              {categoryFilter && categoryFilter !== "all" && (
+                <Button variant="ghost" size="sm" onClick={() => setCategoryFilter("all")}>
                   Reset
                 </Button>
               )}
@@ -360,9 +285,7 @@ export default function ProductsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Daftar Produk</CardTitle>
-          <CardDescription>
-            Semua produk yang terdaftar di sistem
-          </CardDescription>
+          <CardDescription>Semua produk yang terdaftar di sistem</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingProducts ? (
@@ -387,59 +310,35 @@ export default function ProductsPage() {
                 <TableBody>
                   {filteredProducts.map((product) => (
                     <TableRow key={product.id}>
-                      <TableCell className="font-mono text-sm">
-                        {product.barcode}
-                      </TableCell>
+                      <TableCell className="font-mono text-sm">{product.barcode}</TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {product.supplierName}
-                          </p>
+                          <p className="text-xs text-muted-foreground">{product.supplierName}</p>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{product.categoryName}</Badge>
                       </TableCell>
                       <TableCell>
-                        <span
-                          className={
-                            product.stock <= product.minStock
-                              ? "text-destructive font-semibold"
-                              : ""
-                          }
-                        >
+                        <span className={product.stock <= product.minStock ? "text-destructive font-semibold" : ""}>
                           {product.stock} {product.unit}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        {formatCurrency(product.purchasePrice)}
-                      </TableCell>
+                      <TableCell>{formatCurrency(product.purchasePrice)}</TableCell>
                       <TableCell>
                         <div className="text-sm">
                           <p>{formatCurrency(product.sellingPriceGeneral)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Member: {formatCurrency(product.sellingPriceMember)}
-                          </p>
+                          <p className="text-xs text-muted-foreground">Member: {formatCurrency(product.sellingPriceMember)}</p>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        {getStockStatusBadge(product.stockStatus)}
-                      </TableCell>
+                      <TableCell>{getStockStatusBadge(product.stockStatus)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleEdit(product)}
-                          >
+                          <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleDeleteClick(product)}
-                          >
+                          <Button variant="ghost" size="icon-sm" onClick={() => handleDeleteClick(product)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
@@ -450,11 +349,7 @@ export default function ProductsPage() {
               </Table>
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              {search || categoryFilter !== "all"
-                ? "Tidak ada produk yang ditemukan"
-                : "Belum ada produk"}
-            </div>
+            <div className="text-center py-8 text-muted-foreground">{search || (categoryFilter && categoryFilter !== "all") ? "Tidak ada produk yang ditemukan" : "Belum ada produk"}</div>
           )}
         </CardContent>
       </Card>
@@ -463,28 +358,17 @@ export default function ProductsPage() {
       <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingProduct ? "Edit Barang" : "Tambah Barang"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingProduct
-                ? "Ubah informasi produk"
-                : "Tambahkan produk baru ke inventori"}
-            </DialogDescription>
+            <DialogTitle>{editingProduct ? "Edit Barang" : "Tambah Barang"}</DialogTitle>
+            <DialogDescription>{editingProduct ? "Ubah informasi produk" : "Tambahkan produk baru ke inventori"}</DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(handleSubmit)}
-              className="space-y-6"
-            >
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               {/* 2 Column Layout */}
               <div className="grid grid-cols-2 gap-6">
                 {/* KOLOM KIRI */}
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-sm text-muted-foreground">
-                    Informasi Produk
-                  </h3>
+                  <h3 className="font-semibold text-sm text-muted-foreground">Informasi Produk</h3>
 
                   <FormField
                     control={form.control}
@@ -492,11 +376,7 @@ export default function ProductsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Kategori *</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={isSubmitting}
-                        >
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Pilih kategori" />
@@ -522,11 +402,7 @@ export default function ProductsPage() {
                       <FormItem>
                         <FormLabel>Nama Barang *</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Contoh: Indomie Goreng"
-                            {...field}
-                            disabled={isSubmitting}
-                          />
+                          <Input placeholder="Contoh: Indomie Goreng" {...field} disabled={isSubmitting} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -539,11 +415,7 @@ export default function ProductsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Jenis Barang *</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={isSubmitting}
-                        >
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue />
@@ -569,11 +441,7 @@ export default function ProductsPage() {
                       <FormItem>
                         <FormLabel>Tanggal Expire</FormLabel>
                         <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                            disabled={isSubmitting}
-                          />
+                          <Input type="date" {...field} disabled={isSubmitting} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -587,15 +455,7 @@ export default function ProductsPage() {
                       <FormItem>
                         <FormLabel>Stok Minimum *</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseInt(e.target.value) || 0)
-                            }
-                            disabled={isSubmitting}
-                          />
+                          <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} disabled={isSubmitting} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -629,15 +489,7 @@ export default function ProductsPage() {
                         <FormItem>
                           <FormLabel>Harga Jual Umum *</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="0"
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(parseInt(e.target.value) || 0)
-                              }
-                              disabled={isSubmitting}
-                            />
+                            <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} disabled={isSubmitting} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -651,15 +503,7 @@ export default function ProductsPage() {
                         <FormItem>
                           <FormLabel>Harga Jual Anggota *</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="0"
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(parseInt(e.target.value) || 0)
-                              }
-                              disabled={isSubmitting}
-                            />
+                            <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} disabled={isSubmitting} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -675,15 +519,7 @@ export default function ProductsPage() {
                         <FormItem>
                           <FormLabel>Point *</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="0"
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(parseInt(e.target.value) || 0)
-                              }
-                              disabled={isSubmitting}
-                            />
+                            <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} disabled={isSubmitting} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -696,11 +532,7 @@ export default function ProductsPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Satuan *</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            disabled={isSubmitting}
-                          >
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue />
@@ -723,9 +555,7 @@ export default function ProductsPage() {
 
                 {/* KOLOM KANAN */}
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-sm text-muted-foreground">
-                    Informasi Pembelian
-                  </h3>
+                  <h3 className="font-semibold text-sm text-muted-foreground">Informasi Pembelian</h3>
 
                   <FormField
                     control={form.control}
@@ -733,11 +563,7 @@ export default function ProductsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Supplier *</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={isSubmitting}
-                        >
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Pilih supplier" />
@@ -763,11 +589,7 @@ export default function ProductsPage() {
                       <FormItem>
                         <FormLabel>Barcode *</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="8991001234567"
-                            {...field}
-                            disabled={isSubmitting}
-                          />
+                          <Input placeholder="8991001234567" {...field} disabled={isSubmitting} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -780,11 +602,7 @@ export default function ProductsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Jenis Pembelian *</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={isSubmitting}
-                        >
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue />
@@ -808,35 +626,9 @@ export default function ProductsPage() {
                     name="invoiceNo"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Invoice No</FormLabel>
+                        <FormLabel>No. Invoice</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="INV-2024-001"
-                            {...field}
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="maxStock"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Stok Maksimum *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseInt(e.target.value) || 0)
-                            }
-                            disabled={isSubmitting}
-                          />
+                          <Input placeholder="INV-001" {...field} disabled={isSubmitting} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -850,56 +642,51 @@ export default function ProductsPage() {
                       <FormItem>
                         <FormLabel>Harga Beli *</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseInt(e.target.value) || 0)
-                            }
-                            disabled={isSubmitting}
-                          />
+                          <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} disabled={isSubmitting} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="stock"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Qty/Stok Awal *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseInt(e.target.value) || 0)
-                            }
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="stock"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Stok Awal *</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} disabled={isSubmitting} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="maxStock"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Stok Maksimum *</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} disabled={isSubmitting} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
 
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCloseDialog}
-                  disabled={isSubmitting}
-                >
+                <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={isSubmitting}>
                   Batal
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Menyimpan..." : "Simpan"}
+                  {isSubmitting ? "Menyimpan..." : editingProduct ? "Update" : "Tambah"}
                 </Button>
               </DialogFooter>
             </form>
@@ -907,32 +694,31 @@ export default function ProductsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Hapus Produk</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus produk{" "}
-              <strong>{deletingProduct?.name}</strong>?
-              <span className="block mt-2 text-sm">
-                Stok saat ini: {deletingProduct?.stock} {deletingProduct?.unit}
-              </span>
-            </DialogDescription>
+            <DialogDescription>Apakah Anda yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan.</DialogDescription>
           </DialogHeader>
+          {deletingProduct && (
+            <div className="py-4">
+              <p className="text-sm">
+                <span className="font-semibold">Nama:</span> {deletingProduct.name}
+              </p>
+              <p className="text-sm">
+                <span className="font-semibold">Barcode:</span> {deletingProduct.barcode}
+              </p>
+              <p className="text-sm">
+                <span className="font-semibold">Stok:</span> {deletingProduct.stock} {deletingProduct.unit}
+              </p>
+            </div>
+          )}
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isSubmitting}>
               Batal
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
               {isSubmitting ? "Menghapus..." : "Hapus"}
             </Button>
           </DialogFooter>

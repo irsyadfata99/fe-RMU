@@ -8,20 +8,26 @@ export function MSWProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function initMSW() {
-      // Only enable MSW in development or if NEXT_PUBLIC_USE_MSW is set
-      const shouldEnableMSW = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_USE_MSW === "true";
+      // TEMPORARY: MSW DISABLED - Using Real Backend for Auth & Members
+      const shouldEnableMSW = false; // Changed from checking NODE_ENV
+
+      // Alternative: Use environment variable to control MSW
+      // const shouldEnableMSW = process.env.NEXT_PUBLIC_ENABLE_MSW === "true";
 
       if (shouldEnableMSW) {
         try {
           const { worker } = await import("@/mocks/browser");
 
           await worker.start({
-            onUnhandledRequest: "bypass", // Don't warn about unhandled requests
-            quiet: false, // Show MSW logs in console
+            onUnhandledRequest: "bypass",
+            quiet: false,
           });
 
-          console.log("🔶 MSW: Mock API Started");
-          console.log("📡 API Base URL:", process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api");
+          console.log("🟢 MSW: Mock API Started");
+          console.log(
+            "📡 API Base URL:",
+            process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api"
+          );
           console.log("🔑 Demo Credentials:");
           console.log("   Admin: admin / admin123");
           console.log("   Kasir: kasir / kasir123");
@@ -29,7 +35,11 @@ export function MSWProvider({ children }: { children: React.ReactNode }) {
           console.error("❌ MSW: Failed to start", error);
         }
       } else {
-        console.log("⚠️ MSW: Disabled (production mode)");
+        console.log("🔵 MSW: Disabled - Using Real Backend");
+        console.log(
+          "📡 Backend URL:",
+          process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api"
+        );
       }
 
       setMswReady(true);
@@ -38,7 +48,7 @@ export function MSWProvider({ children }: { children: React.ReactNode }) {
     initMSW();
   }, []);
 
-  // Show loading screen until MSW is ready (prevents race conditions)
+  // Show loading screen until MSW check is complete
   if (!mswReady) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -49,7 +59,9 @@ export function MSWProvider({ children }: { children: React.ReactNode }) {
           </div>
           <div className="space-y-2">
             <p className="text-lg font-semibold">Initializing System...</p>
-            <p className="text-sm text-muted-foreground">Setting up mock API</p>
+            <p className="text-sm text-muted-foreground">
+              Connecting to backend
+            </p>
           </div>
         </div>
       </div>

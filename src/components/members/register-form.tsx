@@ -4,12 +4,34 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { memberRegistrationSchema, MemberRegistrationForm } from "@/lib/validations";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  memberRegistrationSchema,
+  MemberRegistrationForm,
+} from "@/lib/validations";
 import { REGIONS } from "@/constants/regions";
 import { Gender } from "@/types";
 import { generateMemberUniqueId } from "@/lib/utils";
@@ -52,7 +74,9 @@ export function RegisterForm({ onSubmit, isLoading }: RegisterFormProps) {
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle>Formulir Pendaftaran Anggota</CardTitle>
-        <CardDescription>Lengkapi data berikut untuk mendaftar sebagai anggota koperasi</CardDescription>
+        <CardDescription>
+          Lengkapi data berikut untuk mendaftar sebagai anggota koperasi
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -65,7 +89,12 @@ export function RegisterForm({ onSubmit, isLoading }: RegisterFormProps) {
                 <FormItem>
                   <FormLabel>NIK KTP *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Masukkan 16 digit NIK" maxLength={16} {...field} disabled={isLoading} />
+                    <Input
+                      placeholder="Masukkan 16 digit NIK"
+                      maxLength={16}
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -80,7 +109,11 @@ export function RegisterForm({ onSubmit, isLoading }: RegisterFormProps) {
                 <FormItem>
                   <FormLabel>Nama Lengkap *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Masukkan nama lengkap" {...field} disabled={isLoading} />
+                    <Input
+                      placeholder="Masukkan nama lengkap"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -114,7 +147,11 @@ export function RegisterForm({ onSubmit, isLoading }: RegisterFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Wilayah *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={isLoading}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih wilayah" />
@@ -132,7 +169,10 @@ export function RegisterForm({ onSubmit, isLoading }: RegisterFormProps) {
                   {/* Preview ID Anggota */}
                   {previewId && (
                     <p className="text-sm text-muted-foreground mt-2">
-                      Preview ID Anggota: <span className="font-semibold text-primary">{previewId}</span>
+                      Preview ID Anggota:{" "}
+                      <span className="font-semibold text-primary">
+                        Akan dibuat otomatis saat registrasi
+                      </span>
                     </p>
                   )}
                 </FormItem>
@@ -147,7 +187,11 @@ export function RegisterForm({ onSubmit, isLoading }: RegisterFormProps) {
                 <FormItem>
                   <FormLabel>Nomor WhatsApp *</FormLabel>
                   <FormControl>
-                    <Input placeholder="08xxxxxxxxxx" {...field} disabled={isLoading} />
+                    <Input
+                      placeholder="08xxxxxxxxxx"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -161,7 +205,11 @@ export function RegisterForm({ onSubmit, isLoading }: RegisterFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Jenis Kelamin *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={isLoading}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih jenis kelamin" />
@@ -169,7 +217,9 @@ export function RegisterForm({ onSubmit, isLoading }: RegisterFormProps) {
                     </FormControl>
                     <SelectContent>
                       <SelectItem value={Gender.MALE}>{Gender.MALE}</SelectItem>
-                      <SelectItem value={Gender.FEMALE}>{Gender.FEMALE}</SelectItem>
+                      <SelectItem value={Gender.FEMALE}>
+                        {Gender.FEMALE}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

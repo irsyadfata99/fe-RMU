@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { Product } from "@/types";
+import { Product, ProductType } from "@/types";
 import useSWR from "swr";
 import { apiClient } from "@/lib/api";
 import {
@@ -28,6 +28,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+// Define interfaces for API responses
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+}
 
 interface ProductFormProps {
   initialData?: Product;
@@ -41,10 +52,10 @@ export function ProductForm({
   isLoading,
 }: ProductFormProps) {
   const { data: categories } = useSWR("/categories", (url) =>
-    apiClient.get<any[]>(url)
+    apiClient.get<Category[]>(url)
   );
   const { data: suppliers } = useSWR("/suppliers", (url) =>
-    apiClient.get<any[]>(url)
+    apiClient.get<Supplier[]>(url)
   );
 
   const form = useForm<ProductFormType>({
@@ -57,9 +68,9 @@ export function ProductForm({
           expiryDate: initialData.expiryDate,
           minStock: initialData.minStock,
           description: initialData.description,
-          sellingPriceGeneral: initialData.sellingPrice,
-          sellingPriceMember: initialData.sellingPrice,
-          points: initialData.pointsPerUnit || 0,
+          sellingPriceGeneral: initialData.sellingPriceGeneral,
+          sellingPriceMember: initialData.sellingPriceMember,
+          points: initialData.points || 0,
           unit: initialData.unit,
           supplierId: initialData.supplierId || "",
           barcode: initialData.barcode || "",
@@ -72,7 +83,7 @@ export function ProductForm({
       : {
           categoryId: "",
           name: "",
-          productType: "Tunai",
+          productType: ProductType.CASH,
           minStock: 0,
           sellingPriceGeneral: 0,
           sellingPriceMember: 0,
@@ -125,7 +136,7 @@ export function ProductForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {categories?.map((cat: any) => (
+                      {categories?.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}
                         </SelectItem>
@@ -192,7 +203,7 @@ export function ProductForm({
                 name="sellingPriceGeneral"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Harga Jual *</FormLabel>
+                    <FormLabel>Harga Jual Umum *</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -206,6 +217,28 @@ export function ProductForm({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="sellingPriceMember"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Harga Jual Member *</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <p className="text-xs text-muted-foreground">
+                    Harga khusus untuk anggota koperasi
+                  </p>
+                </FormItem>
+              )}
+            />
 
             <div className="grid gap-4 md:grid-cols-2">
               <FormField
@@ -268,7 +301,7 @@ export function ProductForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {suppliers?.map((sup: any) => (
+                      {suppliers?.map((sup) => (
                         <SelectItem key={sup.id} value={sup.id}>
                           {sup.name}
                         </SelectItem>
@@ -315,9 +348,13 @@ export function ProductForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Tunai">Tunai</SelectItem>
-                      <SelectItem value="Beli Putus">Beli Putus</SelectItem>
-                      <SelectItem value="Konsinyasi">Konsinyasi</SelectItem>
+                      <SelectItem value={ProductType.CASH}>Tunai</SelectItem>
+                      <SelectItem value={ProductType.INSTALLMENT}>
+                        Beli Putus
+                      </SelectItem>
+                      <SelectItem value={ProductType.CONSIGNMENT}>
+                        Konsinyasi
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

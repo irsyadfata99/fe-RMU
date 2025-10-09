@@ -18,6 +18,7 @@ interface CartItemType {
   product: Product;
   quantity: number;
   subtotal: number;
+  priceUsed: number; // ✅ Track which price is being used
 }
 
 interface Member {
@@ -50,6 +51,13 @@ export function POSInterface() {
     if (input) input.focus();
   }, []);
 
+  // ✅ Auto-update prices when member changes
+  useEffect(() => {
+    if (cart.length > 0) {
+      updateAllPrices();
+    }
+  }, [memberId]);
+
   // Debounced member search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -67,7 +75,12 @@ export function POSInterface() {
   // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node) && memberInputRef.current && !memberInputRef.current.contains(event.target as Node)) {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        memberInputRef.current &&
+        !memberInputRef.current.contains(event.target as Node)
+      ) {
         setShowSuggestions(false);
       }
     };
@@ -79,7 +92,9 @@ export function POSInterface() {
   const searchMembers = async (query: string) => {
     setIsLoadingMembers(true);
     try {
-      const members = await apiClient.get<Member[]>(`/members?search=${query}&limit=10`);
+      const members = await apiClient.get<Member[]>(
+        `/members?search=${query}&limit=10`
+      );
       setMemberSuggestions(members);
       setShowSuggestions(true);
     } catch (error) {
@@ -90,11 +105,35 @@ export function POSInterface() {
     }
   };
 
+  // ✅ Get correct price based on member status
+  const getPrice = (product: Product): number => {
+    return memberId ? product.sellingPriceMember : product.sellingPriceGeneral;
+  };
+
+  // ✅ Update all cart prices when member changes
+  const updateAllPrices = () => {
+    setCart((prevCart) =>
+      prevCart.map((item) => {
+        const newPrice = getPrice(item.product);
+        return {
+          ...item,
+          priceUsed: newPrice,
+          subtotal: newPrice * item.quantity,
+        };
+      })
+    );
+  };
+
   const handleMemberSelect = (member: Member) => {
     setMemberId(member.id);
     setMemberDisplay(`${member.uniqueId} - ${member.fullName}`);
     setMemberSearch("");
     setShowSuggestions(false);
+
+    // Show toast notification
+    toast.success(
+      `Member ${member.fullName} dipilih - Harga berubah ke harga member`
+    );
   };
 
   const handleClearMember = () => {
@@ -103,6 +142,10 @@ export function POSInterface() {
     setMemberSearch("");
     setMemberSuggestions([]);
     setShowSuggestions(false);
+
+    if (cart.length > 0) {
+      toast.info("Member dihapus - Harga kembali ke harga umum");
+    }
   };
 
   const handleMemberInputChange = (value: string) => {
@@ -129,7 +172,9 @@ export function POSInterface() {
   };
 
   const addToCart = (product: Product) => {
+    const price = getPrice(product);
     const existingItem = cart.find((item) => item.product.id === product.id);
+
     if (existingItem) {
       updateQuantity(product.id, existingItem.quantity + 1);
     } else {
@@ -138,7 +183,8 @@ export function POSInterface() {
         {
           product,
           quantity: 1,
-          subtotal: product.sellingPrice,
+          priceUsed: price,
+          subtotal: price,
         },
       ]);
     }
@@ -155,7 +201,7 @@ export function POSInterface() {
           ? {
               ...item,
               quantity,
-              subtotal: item.product.sellingPrice * quantity,
+              subtotal: item.priceUsed * quantity,
             }
           : item
       )
@@ -211,7 +257,8 @@ export function POSInterface() {
 
       setIsPaymentModalOpen(false);
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
       let printUrl = "";
 
       if (paymentData.saleType === "TUNAI") {
@@ -230,7 +277,9 @@ export function POSInterface() {
       toast.success(`Transaksi ${sale.invoiceNumber} berhasil!`);
     } catch (error: any) {
       console.error("❌ Error creating sale:", error);
-      toast.error("Transaksi gagal: " + (error.response?.data?.message || error.message));
+      toast.error(
+        "Transaksi gagal: " + (error.response?.data?.message || error.message)
+      );
     }
   };
 
@@ -266,7 +315,14 @@ export function POSInterface() {
         <div className="space-y-2">
           <Label>Scan Barcode</Label>
           <form onSubmit={handleBarcodeSubmit} className="flex gap-2">
-            <Input id="barcode-input" placeholder="Scan atau ketik barcode..." value={barcode} onChange={(e) => setBarcode(e.target.value)} className="flex-1" autoComplete="off" />
+            <Input
+              id="barcode-input"
+              placeholder="Scan atau ketik barcode..."
+              value={barcode}
+              onChange={(e) => setBarcode(e.target.value)}
+              className="flex-1"
+              autoComplete="off"
+            />
             <Button type="submit">
               <Search className="h-4 w-4" />
             </Button>
@@ -295,7 +351,10 @@ export function POSInterface() {
                   value={memberSearch}
                   onChange={(e) => handleMemberInputChange(e.target.value)}
                   onFocus={() => {
-                    if (memberSearch.length >= 3 && memberSuggestions.length > 0) {
+                    if (
+                      memberSearch.length >= 3 &&
+                      memberSuggestions.length > 0
+                    ) {
                       setShowSuggestions(true);
                     }
                   }}
@@ -310,7 +369,10 @@ export function POSInterface() {
 
               {/* Suggestions Dropdown */}
               {showSuggestions && memberSearch.length >= 3 && (
-                <div ref={suggestionsRef} className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div
+                  ref={suggestionsRef}
+                  className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto"
+                >
                   {isLoadingMembers ? (
                     <div className="p-3 text-sm text-center text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
@@ -319,29 +381,47 @@ export function POSInterface() {
                   ) : memberSuggestions.length > 0 ? (
                     <div className="py-1">
                       {memberSuggestions.map((member) => (
-                        <button key={member.id} type="button" onClick={() => handleMemberSelect(member)} className="w-full px-3 py-2 text-left hover:bg-accent transition-colors cursor-pointer">
+                        <button
+                          key={member.id}
+                          type="button"
+                          onClick={() => handleMemberSelect(member)}
+                          className="w-full px-3 py-2 text-left hover:bg-accent transition-colors cursor-pointer"
+                        >
                           <div className="font-medium text-sm">
                             {member.uniqueId} - {member.fullName}
                           </div>
-                          <div className="text-xs text-muted-foreground">{member.regionName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {member.regionName}
+                          </div>
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <div className="p-3 text-sm text-center text-muted-foreground">Tidak ada member ditemukan</div>
+                    <div className="p-3 text-sm text-center text-muted-foreground">
+                      Tidak ada member ditemukan
+                    </div>
                   )}
                 </div>
               )}
             </>
           )}
-          <p className="text-xs text-muted-foreground">Kosongkan untuk transaksi umum</p>
+          <p className="text-xs text-muted-foreground">
+            {memberId
+              ? "✅ Menggunakan harga member"
+              : "Kosongkan untuk transaksi umum (harga umum)"}
+          </p>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label>Keranjang Belanja</Label>
             {cart.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearCart} className="text-destructive">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearCart}
+                className="text-destructive"
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Kosongkan
               </Button>
@@ -353,14 +433,23 @@ export function POSInterface() {
               <div className="flex h-64 items-center justify-center">
                 <div className="text-center">
                   <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">Keranjang masih kosong</p>
-                  <p className="text-xs text-muted-foreground">Scan barcode untuk menambah produk</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Keranjang masih kosong
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Scan barcode untuk menambah produk
+                  </p>
                 </div>
               </div>
             ) : (
               <div className="divide-y">
                 {cart.map((item) => (
-                  <CartItem key={item.product.id} item={item} onUpdateQuantity={updateQuantity} onRemove={removeFromCart} />
+                  <CartItem
+                    key={item.product.id}
+                    item={item}
+                    onUpdateQuantity={updateQuantity}
+                    onRemove={removeFromCart}
+                  />
                 ))}
               </div>
             )}
@@ -383,12 +472,19 @@ export function POSInterface() {
             <div className="border-t pt-2">
               <div className="flex justify-between">
                 <span className="font-semibold">Total</span>
-                <span className="text-xl font-bold text-primary">{formatCurrency(total)}</span>
+                <span className="text-xl font-bold text-primary">
+                  {formatCurrency(total)}
+                </span>
               </div>
             </div>
           </div>
 
-          <Button className="mt-4 w-full" size="lg" onClick={handleCheckout} disabled={cart.length === 0 || isLoading}>
+          <Button
+            className="mt-4 w-full"
+            size="lg"
+            onClick={handleCheckout}
+            disabled={cart.length === 0 || isLoading}
+          >
             <ShoppingCart className="mr-2 h-5 w-5" />
             Checkout ({cart.length} item)
           </Button>
@@ -398,13 +494,19 @@ export function POSInterface() {
           <p className="font-medium">Tips:</p>
           <ul className="mt-2 space-y-1 text-muted-foreground">
             <li>• Scan barcode atau cari manual</li>
-            <li>• Pilih member untuk transaksi kredit</li>
+            <li>• Pilih member untuk harga member & transaksi kredit</li>
             <li>• Klik item untuk edit jumlah</li>
           </ul>
         </div>
       </div>
 
-      <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} totalAmount={total} hasMember={!!memberId} onConfirm={handlePaymentComplete} />
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        totalAmount={total}
+        hasMember={!!memberId}
+        onConfirm={handlePaymentComplete}
+      />
     </div>
   );
 }

@@ -40,8 +40,10 @@ import { ADJUSTMENT_TYPE_LABELS } from "@/lib/validations";
 
 export default function StockOpnamePage() {
   const user = useCurrentUser();
-  const [status, setStatus] = useState("");
-  const [adjustmentType, setAdjustmentType] = useState("");
+  const [status, setStatus] = useState<string | undefined>(undefined);
+  const [adjustmentType, setAdjustmentType] = useState<string | undefined>(
+    undefined
+  );
   const [page] = useState(1);
 
   // Dialog & Sheet state
@@ -159,12 +161,17 @@ export default function StockOpnamePage() {
 
       {/* Filters */}
       <div className="flex flex-col gap-4 md:flex-row">
-        <Select value={adjustmentType} onValueChange={setAdjustmentType}>
+        <Select
+          value={adjustmentType}
+          onValueChange={(value) =>
+            setAdjustmentType(value === "all" ? undefined : value)
+          }
+        >
           <SelectTrigger className="w-full md:w-[200px]">
             <SelectValue placeholder="Semua Jenis" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Semua Jenis</SelectItem>
+            <SelectItem value="all">Semua Jenis</SelectItem>
             {Object.entries(ADJUSTMENT_TYPE_LABELS).map(([key, label]) => (
               <SelectItem key={key} value={key}>
                 {label}
@@ -173,12 +180,17 @@ export default function StockOpnamePage() {
           </SelectContent>
         </Select>
 
-        <Select value={status} onValueChange={setStatus}>
+        <Select
+          value={status}
+          onValueChange={(value) =>
+            setStatus(value === "all" ? undefined : value)
+          }
+        >
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Semua Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Semua Status</SelectItem>
+            <SelectItem value="all">Semua Status</SelectItem>
             <SelectItem value="APPROVED">Disetujui</SelectItem>
             <SelectItem value="PENDING">Menunggu</SelectItem>
             <SelectItem value="REJECTED">Ditolak</SelectItem>

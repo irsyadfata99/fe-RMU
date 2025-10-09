@@ -56,6 +56,46 @@ export type LoginForm = z.infer<typeof loginSchema>;
 // PRODUCT VALIDATIONS
 // ============================================
 
+export const productSchema = z.object({
+  categoryId: z.string().min(1, "Pilih kategori"),
+  name: z
+    .string()
+    .min(3, "Nama produk minimal 3 karakter")
+    .max(100, "Nama produk maksimal 100 karakter"),
+  productType: z.nativeEnum(ProductType, {
+    message: "Pilih jenis produk",
+  }),
+  expiryDate: z.string().optional(),
+  minStock: z.number().min(0, "Stok minimum tidak boleh negatif"),
+  maxStock: z.number().min(0, "Stok maksimum tidak boleh negatif").optional(),
+  description: z
+    .string()
+    .max(500, "Deskripsi maksimal 500 karakter")
+    .optional(),
+  sellingPriceGeneral: z.number().min(0, "Harga jual umum tidak boleh negatif"),
+  sellingPriceMember: z
+    .number()
+    .min(0, "Harga jual member tidak boleh negatif"),
+  points: z.number().min(0, "Point tidak boleh negatif"),
+  unit: z
+    .string()
+    .min(1, "Satuan harus diisi")
+    .max(20, "Satuan maksimal 20 karakter"),
+  supplierId: z.string().min(1, "Pilih supplier").optional(),
+  barcode: z.string().max(50, "Barcode maksimal 50 karakter").optional(),
+  purchaseType: z.enum(["Cash", "Hutang"], {
+    message: "Pilih jenis pembelian",
+  }),
+  invoiceNo: z
+    .string()
+    .max(50, "Nomor invoice maksimal 50 karakter")
+    .optional(),
+  purchasePrice: z.number().min(0, "Harga beli tidak boleh negatif"),
+  stock: z.number().min(0, "Stok tidak boleh negatif"),
+});
+
+export type ProductForm = z.infer<typeof productSchema>;
+
 // ============================================
 // CATEGORY VALIDATIONS
 // ============================================

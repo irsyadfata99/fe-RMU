@@ -46,7 +46,15 @@ export function StockMovementFilter({
   };
 
   const handleApply = () => {
-    onFilter(filters);
+    // Convert empty strings to undefined for API
+    const apiFilters = Object.entries(filters).reduce((acc, [key, value]) => {
+      if (value && value !== "all") {
+        acc[key as keyof typeof filters] = value;
+      }
+      return acc;
+    }, {} as Record<string, string>);
+
+    onFilter(apiFilters);
   };
 
   const handleReset = () => {
@@ -60,7 +68,9 @@ export function StockMovementFilter({
     onReset();
   };
 
-  const hasActiveFilters = Object.values(filters).some((value) => value !== "");
+  const hasActiveFilters = Object.values(filters).some(
+    (value) => value !== "" && value !== "all"
+  );
 
   return (
     <Card>
@@ -77,7 +87,9 @@ export function StockMovementFilter({
               <Filter className="h-4 w-4" />
               Filter{" "}
               {hasActiveFilters &&
-                `(${Object.values(filters).filter((v) => v).length})`}
+                `(${
+                  Object.values(filters).filter((v) => v && v !== "all").length
+                })`}
             </Button>
             {hasActiveFilters && (
               <Button
@@ -100,14 +112,14 @@ export function StockMovementFilter({
                 <div className="space-y-2">
                   <Label>Tipe Gerakan</Label>
                   <Select
-                    value={filters.type}
+                    value={filters.type || "all"}
                     onValueChange={(value) => handleFilterChange("type", value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Semua tipe" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Semua</SelectItem>
+                      <SelectItem value="all">Semua</SelectItem>
                       {Object.entries(STOCK_MOVEMENT_TYPE_LABELS).map(
                         ([key, label]) => (
                           <SelectItem key={key} value={key}>
@@ -123,7 +135,7 @@ export function StockMovementFilter({
                 <div className="space-y-2">
                   <Label>Referensi</Label>
                   <Select
-                    value={filters.referenceType}
+                    value={filters.referenceType || "all"}
                     onValueChange={(value) =>
                       handleFilterChange("referenceType", value)
                     }
@@ -132,7 +144,7 @@ export function StockMovementFilter({
                       <SelectValue placeholder="Semua referensi" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Semua</SelectItem>
+                      <SelectItem value="all">Semua</SelectItem>
                       <SelectItem value="PURCHASE">Pembelian</SelectItem>
                       <SelectItem value="SALE">Penjualan</SelectItem>
                       <SelectItem value="ADJUSTMENT">Penyesuaian</SelectItem>

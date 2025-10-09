@@ -13,6 +13,7 @@ interface CartItemProps {
     product: Product;
     quantity: number;
     subtotal: number;
+    priceUsed: number; // ✅ Use the tracked price
   };
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemove: (productId: string) => void;
@@ -36,7 +37,7 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
       <div className="flex-1 space-y-1">
         <p className="font-medium">{item.product.name}</p>
         <p className="text-sm text-muted-foreground">
-          {formatCurrency(item.product.sellingPrice)} × {item.quantity}
+          {formatCurrency(item.priceUsed)} × {item.quantity}
         </p>
         <p className="text-xs text-muted-foreground">
           Stok: {item.product.stock} {item.product.unit}

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useProductActions } from "@/hooks/useProduct";
 import { useTransactionActions } from "@/hooks/useTransaction";
 import { CartItem } from "./cart-item";
@@ -8,33 +8,116 @@ import { BarcodeScanner } from "@/components/products/barcode-scanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, ShoppingCart, Trash2 } from "lucide-react";
+import { Search, ShoppingCart, Trash2, Loader2, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { Product } from "@/types";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import useSWR from "swr";
 import { apiClient } from "@/lib/api";
+
 interface CartItemType {
   product: Product;
   quantity: number;
   subtotal: number;
 }
+
+interface Member {
+  id: string;
+  uniqueId: string;
+  fullName: string;
+  regionName: string;
+}
+
 export function POSInterface() {
   const [cart, setCart] = useState<CartItemType[]>([]);
   const [barcode, setBarcode] = useState("");
   const [memberId, setMemberId] = useState<string>("");
+  const [memberDisplay, setMemberDisplay] = useState<string>("");
+  const [memberSearch, setMemberSearch] = useState<string>("");
+  const [memberSuggestions, setMemberSuggestions] = useState<Member[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
+  const memberInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
   const { searchByBarcode } = useProductActions();
   const { createSale, isLoading } = useTransactionActions();
-  const { data: members } = useSWR("/members", (url) => apiClient.get<any[]>(url));
+
+  // Focus barcode input on mount
   useEffect(() => {
     const input = document.getElementById("barcode-input") as HTMLInputElement;
     if (input) input.focus();
   }, []);
+
+  // Debounced member search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (memberSearch.length >= 3) {
+        searchMembers(memberSearch);
+      } else {
+        setMemberSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [memberSearch]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node) && memberInputRef.current && !memberInputRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const searchMembers = async (query: string) => {
+    setIsLoadingMembers(true);
+    try {
+      const members = await apiClient.get<Member[]>(`/members?search=${query}&limit=10`);
+      setMemberSuggestions(members);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error("Error searching members:", error);
+      setMemberSuggestions([]);
+    } finally {
+      setIsLoadingMembers(false);
+    }
+  };
+
+  const handleMemberSelect = (member: Member) => {
+    setMemberId(member.id);
+    setMemberDisplay(`${member.uniqueId} - ${member.fullName}`);
+    setMemberSearch("");
+    setShowSuggestions(false);
+  };
+
+  const handleClearMember = () => {
+    setMemberId("");
+    setMemberDisplay("");
+    setMemberSearch("");
+    setMemberSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  const handleMemberInputChange = (value: string) => {
+    setMemberSearch(value);
+    if (memberId) {
+      // Clear selection when user starts typing again
+      setMemberId("");
+      setMemberDisplay("");
+    }
+  };
+
   const handleBarcodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!barcode.trim()) return;
+
     try {
       const product = await searchByBarcode(barcode);
       addToCart(product);
@@ -44,6 +127,7 @@ export function POSInterface() {
       toast.error(error.response?.data?.message || "Produk tidak ditemukan");
     }
   };
+
   const addToCart = (product: Product) => {
     const existingItem = cart.find((item) => item.product.id === product.id);
     if (existingItem) {
@@ -59,6 +143,7 @@ export function POSInterface() {
       ]);
     }
   };
+
   const updateQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
@@ -76,20 +161,24 @@ export function POSInterface() {
       )
     );
   };
+
   const removeFromCart = (productId: string) => {
     setCart(cart.filter((item) => item.product.id !== productId));
     toast.success("Item dihapus dari keranjang");
   };
+
   const clearCart = () => {
     if (window.confirm("Yakin ingin mengosongkan keranjang?")) {
       setCart([]);
-      setMemberId("");
+      handleClearMember();
       toast.success("Keranjang dikosongkan");
     }
   };
+
   const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
   const discount = 0;
   const total = subtotal - discount;
+
   const handleCheckout = () => {
     if (cart.length === 0) {
       toast.error("Keranjang masih kosong");
@@ -97,10 +186,11 @@ export function POSInterface() {
     }
     setIsPaymentModalOpen(true);
   };
+
   const handlePaymentComplete = async (paymentData: any) => {
     try {
       const saleData = {
-        memberId: memberId && memberId !== "UMUM" ? memberId : undefined,
+        memberId: memberId || undefined,
         saleType: paymentData.saleType,
         items: cart.map((item) => ({
           productId: item.product.id,
@@ -121,7 +211,6 @@ export function POSInterface() {
 
       setIsPaymentModalOpen(false);
 
-      // ✅ NEW: Get print HTML and print directly
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
       let printUrl = "";
 
@@ -133,12 +222,10 @@ export function POSInterface() {
         toast.success("Transaksi KREDIT berhasil!");
       }
 
-      // ✅ FIX: Fetch HTML and print in same tab
       await printInCurrentTab(printUrl);
 
-      // Clear cart
       setCart([]);
-      setMemberId("");
+      handleClearMember();
 
       toast.success(`Transaksi ${sale.invoiceNumber} berhasil!`);
     } catch (error: any) {
@@ -147,77 +234,32 @@ export function POSInterface() {
     }
   };
 
-  // ✅ NEW: Print in current tab
   const printInCurrentTab = async (url: string) => {
     try {
-      // Fetch HTML content
       const response = await fetch(url);
       const html = await response.text();
 
-      // Create a new window with the HTML content
       const printWindow = window.open("", "_blank");
 
       if (!printWindow) {
         throw new Error("Pop-up blocked");
       }
 
-      // Write HTML to new window
       printWindow.document.write(html);
       printWindow.document.close();
 
-      // Wait for content to load, then print
       printWindow.onload = () => {
         printWindow.print();
-
-        // Close window after print
         printWindow.onafterprint = () => {
           printWindow.close();
         };
       };
     } catch (error) {
       console.error("Print error:", error);
-      // Fallback
       window.open(url, "_blank");
     }
   };
 
-  // ✅ NEW: Function untuk print via iframe
-  const printIframe = (url: string) => {
-    // Create hidden iframe
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = url;
-
-    document.body.appendChild(iframe);
-
-    // Wait for iframe to load, then print
-    iframe.onload = () => {
-      try {
-        // Trigger print on iframe content
-        iframe.contentWindow?.print();
-
-        // Remove iframe after print dialog closes
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 1000);
-      } catch (error) {
-        console.error("Print error:", error);
-
-        // Fallback: open in new tab if iframe print fails
-        window.open(url, "_blank");
-        document.body.removeChild(iframe);
-      }
-    };
-
-    // Error handling
-    iframe.onerror = () => {
-      console.error("Failed to load print content");
-      document.body.removeChild(iframe);
-
-      // Fallback: open in new tab
-      window.open(url, "_blank");
-    };
-  };
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
@@ -232,21 +274,67 @@ export function POSInterface() {
         </div>
         <BarcodeScanner onProductFound={addToCart} />
 
-        <div className="space-y-2">
+        {/* Member Autocomplete */}
+        <div className="space-y-2 relative">
           <Label>Member (Opsional)</Label>
-          <Select value={memberId} onValueChange={setMemberId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Pilih member atau kosongkan untuk umum" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="UMUM">UMUM (Tidak ada member)</SelectItem>
-              {members?.map((member: any) => (
-                <SelectItem key={member.id} value={member.id}>
-                  {member.uniqueId} - {member.fullName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {memberId ? (
+            // Display selected member
+            <div className="flex items-center gap-2">
+              <Input value={memberDisplay} disabled className="flex-1" />
+              <Button variant="ghost" size="icon" onClick={handleClearMember}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            // Search input
+            <>
+              <div className="relative">
+                <Input
+                  ref={memberInputRef}
+                  placeholder="Ketik kode atau nama member... (min 3 karakter)"
+                  value={memberSearch}
+                  onChange={(e) => handleMemberInputChange(e.target.value)}
+                  onFocus={() => {
+                    if (memberSearch.length >= 3 && memberSuggestions.length > 0) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                  autoComplete="off"
+                />
+                {isLoadingMembers && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+
+              {/* Suggestions Dropdown */}
+              {showSuggestions && memberSearch.length >= 3 && (
+                <div ref={suggestionsRef} className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {isLoadingMembers ? (
+                    <div className="p-3 text-sm text-center text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                      Mencari...
+                    </div>
+                  ) : memberSuggestions.length > 0 ? (
+                    <div className="py-1">
+                      {memberSuggestions.map((member) => (
+                        <button key={member.id} type="button" onClick={() => handleMemberSelect(member)} className="w-full px-3 py-2 text-left hover:bg-accent transition-colors cursor-pointer">
+                          <div className="font-medium text-sm">
+                            {member.uniqueId} - {member.fullName}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{member.regionName}</div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-3 text-sm text-center text-muted-foreground">Tidak ada member ditemukan</div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+          <p className="text-xs text-muted-foreground">Kosongkan untuk transaksi umum</p>
         </div>
 
         <div className="space-y-2">
@@ -316,7 +404,7 @@ export function POSInterface() {
         </div>
       </div>
 
-      <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} totalAmount={total} hasMember={!!memberId && memberId !== "UMUM"} onConfirm={handlePaymentComplete} />
+      <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} totalAmount={total} hasMember={!!memberId} onConfirm={handlePaymentComplete} />
     </div>
   );
 }

@@ -39,9 +39,10 @@ export default function PurchaseHistoryPage() {
     page,
     limit: 10,
     search,
-    purchaseType: purchaseType || undefined,
-    status: status || undefined,
-    supplierId: supplierId || undefined,
+    purchaseType:
+      purchaseType && purchaseType !== "all" ? purchaseType : undefined,
+    status: status && status !== "all" ? status : undefined,
+    supplierId: supplierId && supplierId !== "all" ? supplierId : undefined,
   });
 
   const { suppliers } = useSuppliers({ isActive: true });
@@ -108,7 +109,8 @@ export default function PurchaseHistoryPage() {
             <SelectValue placeholder="Semua Supplier" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Semua Supplier</SelectItem>
+            {/* ✅ FIX: Gunakan "all" sebagai value untuk "Semua" */}
+            <SelectItem value="all">Semua Supplier</SelectItem>
             {suppliers?.map((supplier) => (
               <SelectItem key={supplier.id} value={supplier.id}>
                 {supplier.name}
@@ -122,7 +124,8 @@ export default function PurchaseHistoryPage() {
             <SelectValue placeholder="Jenis" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Semua</SelectItem>
+            {/* ✅ FIX: Gunakan "all" sebagai value */}
+            <SelectItem value="all">Semua</SelectItem>
             <SelectItem value="TUNAI">Tunai</SelectItem>
             <SelectItem value="KREDIT">Kredit</SelectItem>
             <SelectItem value="KONSINYASI">Konsinyasi</SelectItem>
@@ -134,7 +137,8 @@ export default function PurchaseHistoryPage() {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Semua</SelectItem>
+            {/* ✅ FIX: Gunakan "all" sebagai value */}
+            <SelectItem value="all">Semua</SelectItem>
             <SelectItem value="PAID">Lunas</SelectItem>
             <SelectItem value="PARTIAL">Sebagian</SelectItem>
             <SelectItem value="PENDING">Pending</SelectItem>

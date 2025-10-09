@@ -1,12 +1,10 @@
-// src/app/dashboard/transaksi/penjualan/page.tsx
 "use client";
 
 import { useState } from "react";
 import { useTransactions } from "@/hooks/useTransaction";
 import { TransactionTable } from "@/components/transactions/transaction-table";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter } from "lucide-react";
+import { Search } from "lucide-react";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import {
   Select,
@@ -18,16 +16,16 @@ import {
 
 export default function TransactionHistoryPage() {
   const [search, setSearch] = useState("");
-  const [saleType, setSaleType] = useState("");
-  const [status, setStatus] = useState("");
-  const [page, setPage] = useState(1);
+  const [saleType, setSaleType] = useState<string | undefined>(undefined);
+  const [status, setStatus] = useState<string | undefined>(undefined);
+  const [page] = useState(1);
 
   const { transactions, isLoading } = useTransactions({
     page,
     limit: 10,
     search,
-    saleType: saleType || undefined,
-    status: status || undefined,
+    saleType: saleType,
+    status: status,
   });
 
   return (
@@ -50,23 +48,33 @@ export default function TransactionHistoryPage() {
           />
         </div>
 
-        <Select value={saleType} onValueChange={setSaleType}>
+        <Select
+          value={saleType || "all"}
+          onValueChange={(value) =>
+            setSaleType(value === "all" ? undefined : value)
+          }
+        >
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Jenis" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Semua</SelectItem>
+            <SelectItem value="all">Semua</SelectItem>
             <SelectItem value="TUNAI">Tunai</SelectItem>
             <SelectItem value="KREDIT">Kredit</SelectItem>
           </SelectContent>
         </Select>
 
-        <Select value={status} onValueChange={setStatus}>
+        <Select
+          value={status || "all"}
+          onValueChange={(value) =>
+            setStatus(value === "all" ? undefined : value)
+          }
+        >
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Semua</SelectItem>
+            <SelectItem value="all">Semua</SelectItem>
             <SelectItem value="PAID">Lunas</SelectItem>
             <SelectItem value="PARTIAL">Cicilan</SelectItem>
             <SelectItem value="PENDING">Pending</SelectItem>

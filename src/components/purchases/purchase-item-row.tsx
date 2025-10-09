@@ -39,16 +39,16 @@ export function PurchaseItemRow({
   initialData,
 }: PurchaseItemRowProps) {
   const [search, setSearch] = useState("");
-  const [showResults, setShowResults] = useState(false);
+  const [showResults, setShowResults] = useState(false); // ✅ TAMBAHKAN INI
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [quantity, setQuantity] = useState(initialData?.quantity || 1);
+  const [quantity, setQuantity] = useState(initialData?.quantity ?? 1);
   const [purchasePrice, setPurchasePrice] = useState(
-    initialData?.purchasePrice || 0
+    initialData?.purchasePrice ?? 0
   );
   const [sellingPrice, setSellingPrice] = useState(
-    initialData?.sellingPrice || 0
+    initialData?.sellingPrice ?? 0
   );
-  const [expDate, setExpDate] = useState(initialData?.expDate || "");
+  const [expDate, setExpDate] = useState(initialData?.expDate ?? "");
 
   // Product autocomplete
   const { data: products } = useSWR(
@@ -83,11 +83,13 @@ export function PurchaseItemRow({
   };
 
   const handleQuantityChange = (newQuantity: number) => {
-    setQuantity(newQuantity);
+    const validQuantity =
+      isNaN(newQuantity) || newQuantity < 1 ? 1 : newQuantity;
+    setQuantity(validQuantity);
     if (selectedProduct) {
       onChange(index, {
         productId: selectedProduct.id,
-        quantity: newQuantity,
+        quantity: validQuantity,
         purchasePrice,
         sellingPrice,
         expDate,
@@ -96,12 +98,13 @@ export function PurchaseItemRow({
   };
 
   const handlePurchasePriceChange = (newPrice: number) => {
-    setPurchasePrice(newPrice);
+    const validPrice = isNaN(newPrice) || newPrice < 0 ? 0 : newPrice;
+    setPurchasePrice(validPrice);
     if (selectedProduct) {
       onChange(index, {
         productId: selectedProduct.id,
         quantity,
-        purchasePrice: newPrice,
+        purchasePrice: validPrice,
         sellingPrice,
         expDate,
       });
@@ -109,13 +112,14 @@ export function PurchaseItemRow({
   };
 
   const handleSellingPriceChange = (newPrice: number) => {
-    setSellingPrice(newPrice);
+    const validPrice = isNaN(newPrice) || newPrice < 0 ? 0 : newPrice;
+    setSellingPrice(validPrice);
     if (selectedProduct) {
       onChange(index, {
         productId: selectedProduct.id,
         quantity,
         purchasePrice,
-        sellingPrice: newPrice,
+        sellingPrice: validPrice,
         expDate,
       });
     }
@@ -134,7 +138,9 @@ export function PurchaseItemRow({
     }
   };
 
-  const subtotal = quantity * purchasePrice;
+  // ✅ FIX: Validasi subtotal untuk menghindari NaN
+  const subtotal = (quantity || 0) * (purchasePrice || 0);
+  const displaySubtotal = isNaN(subtotal) ? 0 : subtotal;
 
   return (
     <div className="grid grid-cols-12 gap-2 items-start p-3 border rounded-lg bg-muted/30">
@@ -187,7 +193,7 @@ export function PurchaseItemRow({
       <div className="col-span-1">
         <Input
           type="number"
-          value={quantity}
+          value={quantity || ""}
           onChange={(e) => handleQuantityChange(Number(e.target.value))}
           min={1}
           disabled={!selectedProduct}
@@ -208,7 +214,7 @@ export function PurchaseItemRow({
       <div className="col-span-2">
         <Input
           type="number"
-          value={purchasePrice}
+          value={purchasePrice || ""}
           onChange={(e) => handlePurchasePriceChange(Number(e.target.value))}
           min={0}
           disabled={!selectedProduct}
@@ -220,7 +226,7 @@ export function PurchaseItemRow({
       <div className="col-span-2">
         <Input
           type="number"
-          value={sellingPrice}
+          value={sellingPrice || ""}
           onChange={(e) => handleSellingPriceChange(Number(e.target.value))}
           min={0}
           disabled={!selectedProduct}
@@ -232,7 +238,7 @@ export function PurchaseItemRow({
       <div className="col-span-2">
         <Input
           type="date"
-          value={expDate}
+          value={expDate || ""}
           onChange={(e) => handleExpDateChange(e.target.value)}
           disabled={!selectedProduct}
           className="h-8"
@@ -241,7 +247,9 @@ export function PurchaseItemRow({
 
       {/* Subtotal */}
       <div className="col-span-1 flex items-center justify-end">
-        <p className="text-sm font-semibold">{formatCurrency(subtotal)}</p>
+        <p className="text-sm font-semibold">
+          {formatCurrency(displaySubtotal)}
+        </p>
       </div>
 
       {/* Remove Button */}

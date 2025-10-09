@@ -260,21 +260,31 @@ export interface Transaction {
   id: string;
   invoiceNumber: string;
   memberId?: string;
-  memberName?: string;
-  memberUniqueId?: string;
-  cashierId: string;
-  cashierName: string;
-  transactionType: TransactionType;
-  paymentStatus: PaymentStatus;
-  items: TransactionItem[];
-  subtotal: number;
-  discount: number;
-  tax: number;
-  total: number;
-  paidAmount: number;
+  saleDate: string; // ✅ Backend: saleDate
+  saleType: "TUNAI" | "KREDIT"; // ✅ Backend: TUNAI/KREDIT
+  totalAmount: number;
+  discountAmount: number;
+  finalAmount: number; // ✅ Backend: finalAmount (bukan total)
+  dpAmount: number;
+  remainingDebt: number;
+  paymentReceived: number;
   changeAmount: number;
-  pointsEarned: number;
+  dueDate?: string;
+  status: "PENDING" | "PARTIAL" | "PAID" | "CANCELLED";
   notes?: string;
+  items: TransactionItem[]; // ✅ Dari include
+  member?: {
+    // ✅ Dari include
+    id: string;
+    uniqueId: string;
+    fullName: string;
+  };
+  user?: {
+    // ✅ Dari include
+    id: string;
+    name: string;
+    username: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

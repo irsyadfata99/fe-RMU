@@ -7,7 +7,7 @@ import { apiClient } from "@/lib/api";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const fetcher = (url: string) => apiClient.get<Transaction[]>(url);
+const fetcher = (url: string) => apiClient.get<any>(url);
 
 export function useTransactions(params?: {
   page?: number;

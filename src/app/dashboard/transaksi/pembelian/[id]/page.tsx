@@ -1,7 +1,7 @@
 // src/app/dashboard/transaksi/pembelian/[id]/page.tsx
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react"; // ✅ Import 'use' from React
 import { usePurchase, usePurchaseActions } from "@/hooks/usePurchase";
 import { PurchaseDetail } from "@/components/purchases/purchase-detail";
 import { PurchasePaymentModal } from "@/components/purchases/purchase-payment-modal";
@@ -13,9 +13,12 @@ import Link from "next/link";
 export default function PurchaseDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>; // ✅ Ubah type menjadi Promise
 }) {
-  const { purchase, isLoading, mutate } = usePurchase(params.id);
+  // ✅ Unwrap params menggunakan React.use()
+  const { id } = use(params);
+
+  const { purchase, isLoading, mutate } = usePurchase(id);
   const { updatePayment, isLoading: isUpdating } = usePurchaseActions();
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -25,7 +28,7 @@ export default function PurchaseDetailPage({
     notes?: string;
   }) => {
     try {
-      await updatePayment(params.id, data);
+      await updatePayment(id, data);
       setIsPaymentModalOpen(false);
       mutate();
     } catch (error) {

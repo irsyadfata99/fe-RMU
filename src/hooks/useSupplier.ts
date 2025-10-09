@@ -9,7 +9,12 @@ import { toast } from "sonner";
 
 const fetcher = (url: string) => apiClient.get<Supplier[]>(url);
 
-export function useSuppliers(params?: { page?: number; limit?: number; search?: string; isActive?: boolean }) {
+export function useSuppliers(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean;
+}) {
   const queryString = new URLSearchParams(
     Object.entries(params || {}).reduce((acc, [key, value]) => {
       if (value !== undefined && value !== null) {
@@ -19,7 +24,11 @@ export function useSuppliers(params?: { page?: number; limit?: number; search?: 
     }, {} as Record<string, string>)
   ).toString();
 
-  const { data, error, isLoading, mutate } = useSWR(`/suppliers?${queryString}`, fetcher, { revalidateOnFocus: false });
+  const { data, error, isLoading, mutate } = useSWR(
+    `/suppliers?${queryString}`,
+    fetcher,
+    { revalidateOnFocus: false }
+  );
 
   return {
     suppliers: data,
@@ -30,7 +39,11 @@ export function useSuppliers(params?: { page?: number; limit?: number; search?: 
 }
 
 export function useSupplier(id: string) {
-  const { data, error, isLoading, mutate } = useSWR(id ? `/suppliers/${id}` : null, (url) => apiClient.get<Supplier>(url), { revalidateOnFocus: false });
+  const { data, error, isLoading, mutate } = useSWR(
+    id ? `/suppliers/${id}` : null,
+    (url) => apiClient.get<Supplier>(url),
+    { revalidateOnFocus: false }
+  );
 
   return {
     supplier: data,
@@ -43,14 +56,23 @@ export function useSupplier(id: string) {
 export function useSupplierActions() {
   const [isLoading, setIsLoading] = useState(false);
 
-  const createSupplier = async (data: { name: string; address: string; phone: string; email?: string }) => {
+  const createSupplier = async (data: {
+    name: string;
+    address: string;
+    phone: string;
+    contactPerson?: string;
+    email?: string;
+    description?: string;
+  }) => {
     setIsLoading(true);
     try {
       const supplier = await apiClient.post<Supplier>("/suppliers", data);
       toast.success("Supplier berhasil ditambahkan");
       return supplier;
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal menambahkan supplier");
+      toast.error(
+        error.response?.data?.message || "Gagal menambahkan supplier"
+      );
       throw error;
     } finally {
       setIsLoading(false);
@@ -63,7 +85,9 @@ export function useSupplierActions() {
       name: string;
       address: string;
       phone: string;
+      contactPerson?: string; // ⬅️ Tambah ini
       email?: string;
+      description?: string; // ⬅️ Tambah ini
     }
   ) => {
     setIsLoading(true);

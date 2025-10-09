@@ -1,6 +1,11 @@
 // src/lib/api.ts
 
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, {
+  AxiosError,
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+} from "axios";
 import { ApiError, ApiResponse } from "@/types";
 
 // ============================================
@@ -69,7 +74,13 @@ api.interceptors.response.use(
 
         case 422:
           // Validation error
-          console.error("Validation error:", data.errors);
+          if (data.errors && Object.keys(data.errors).length > 0) {
+            console.error("Validation error:", data.errors);
+          } else if (data.message) {
+            console.error("Validation error:", data.message);
+          } else {
+            console.error("Validation error: Unknown validation error");
+          }
           break;
 
         case 500:
@@ -106,7 +117,9 @@ export const setAuthToken = (token: string): void => {
     localStorage.setItem("auth_token", token);
 
     // Also set as cookie for middleware
-    document.cookie = `auth_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
+    document.cookie = `auth_token=${token}; path=/; max-age=${
+      60 * 60 * 24 * 7
+    }`; // 7 days
   }
 };
 
@@ -133,16 +146,21 @@ export const handleApiError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiError>;
 
+    // Prioritas 1: Message dari response
     if (axiosError.response?.data?.message) {
       return axiosError.response.data.message;
     }
 
+    // Prioritas 2: Validation errors
     if (axiosError.response?.data?.errors) {
-      // Convert validation errors to string
       const errors = axiosError.response.data.errors;
-      return Object.values(errors).flat().join(", ");
+      const errorMessages = Object.values(errors).flat();
+      if (errorMessages.length > 0) {
+        return errorMessages.join(", ");
+      }
     }
 
+    // Prioritas 3: Axios message
     if (axiosError.message) {
       return axiosError.message;
     }
@@ -165,21 +183,33 @@ export const apiClient = {
 
   // POST request
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  post: async <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+  post: async <T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig
+  ): Promise<T> => {
     const response = await api.post<ApiResponse<T>>(url, data, config);
     return response.data.data;
   },
 
   // PUT request
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  put: async <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+  put: async <T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig
+  ): Promise<T> => {
     const response = await api.put<ApiResponse<T>>(url, data, config);
     return response.data.data;
   },
 
   // PATCH request
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  patch: async <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+  patch: async <T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig
+  ): Promise<T> => {
     const response = await api.patch<ApiResponse<T>>(url, data, config);
     return response.data.data;
   },

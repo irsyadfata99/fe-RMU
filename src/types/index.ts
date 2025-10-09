@@ -26,12 +26,7 @@ export enum PaymentStatus {
   PARTIAL = "PARTIAL",
 }
 
-export enum StockMovementType {
-  IN = "IN",
-  OUT = "OUT",
-  RETURN = "RETURN",
-  ADJUSTMENT = "ADJUSTMENT",
-}
+// REMOVED OLD DUPLICATE StockMovementType - using the one below instead
 
 export enum ProductType {
   CASH = "Tunai",
@@ -39,10 +34,7 @@ export enum ProductType {
   CONSIGNMENT = "Konsinyasi",
 }
 
-export enum PurchaseType {
-  CASH = "Cash",
-  CREDIT = "Hutang",
-}
+export type PurchaseType = "TUNAI" | "KREDIT" | "KONSINYASI";
 
 export enum StockStatus {
   NORMAL = "Normal",
@@ -51,6 +43,32 @@ export enum StockStatus {
   EMPTY = "Habis",
 }
 
+export enum PurchaseStatus {
+  PENDING = "PENDING",
+  PARTIAL = "PARTIAL",
+  PAID = "PAID",
+  CANCELLED = "CANCELLED",
+}
+
+export type StockMovementType =
+  | "IN"
+  | "OUT"
+  | "ADJUSTMENT"
+  | "RETURN_IN"
+  | "RETURN_OUT";
+
+export type StockReferenceType = "PURCHASE" | "SALE" | "ADJUSTMENT" | "RETURN";
+
+export type AdjustmentType =
+  | "DAMAGED"
+  | "EXPIRED"
+  | "LOST"
+  | "LEAKED"
+  | "REPACK"
+  | "FOUND"
+  | "OTHER";
+
+export type AdjustmentStatus = "PENDING" | "APPROVED" | "REJECTED";
 // ============================================
 // REGION & CONSTANTS
 // ============================================
@@ -158,7 +176,7 @@ export interface Supplier {
 }
 
 // ============================================
-// PRODUCT (BARANG) - FIXED!
+// PRODUCT (BARANG)
 // ============================================
 
 export interface Product {
@@ -325,20 +343,85 @@ export interface PayablePayment {
 }
 
 // ============================================
-// STOCK MOVEMENT
+// STOCK MOVEMENT & ADJUSTMENT
 // ============================================
 
-export interface StockMovement {
+export interface StockMovementRecord {
   id: string;
   productId: string;
-  productName: string;
   type: StockMovementType;
   quantity: number;
+  quantityBefore: number;
+  quantityAfter: number;
+  referenceType?: StockReferenceType;
+  referenceId?: string;
   notes?: string;
-  userId: string;
-  userName: string;
+  createdBy: string;
   createdAt: string;
+  updatedAt: string;
+  product?: {
+    id: string;
+    name: string;
+    sku: string;
+    unit: string;
+  };
+  user?: {
+    id: string;
+    name: string;
+  };
 }
+
+export interface StockAdjustmentRecord {
+  id: string;
+  productId: string;
+  userId: string;
+  adjustmentNumber: string;
+  adjustmentType: AdjustmentType;
+  quantity: number;
+  reason: string;
+  adjustmentDate: string;
+  notes?: string;
+  approvedBy?: string;
+  status: AdjustmentStatus;
+  createdAt: string;
+  updatedAt: string;
+  product?: {
+    id: string;
+    name: string;
+    sku: string;
+    unit: string;
+    stock: number;
+  };
+  user?: {
+    id: string;
+    name: string;
+  };
+  approver?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface CreateAdjustmentRequest {
+  productId: string;
+  adjustmentType: AdjustmentType;
+  quantity: number;
+  reason: string;
+  notes?: string;
+}
+
+export interface StockStats {
+  totalProducts: number;
+  totalStock: number;
+  lowStockProducts: number;
+  outOfStockProducts: number;
+  totalMovements: number;
+  pendingAdjustments: number;
+}
+
+// Aliases for backward compatibility
+export type StockMovement = StockMovementRecord;
+export type StockAdjustment = StockAdjustmentRecord;
 
 // ============================================
 // RETURN (RETUR BARANG)
@@ -505,6 +588,84 @@ export interface UserLog {
   description: string;
   ipAddress?: string;
   createdAt: string;
+}
+
+// ============================================
+// PURCHASE (PEMBELIAN / BARANG MASUK)
+// ============================================
+
+export interface PurchaseItem {
+  id: string;
+  purchaseId: string;
+  productId: string;
+  productName?: string; // Dari JOIN
+  quantity: number;
+  unit: string;
+  purchasePrice: number;
+  sellingPrice: number;
+  expDate?: string;
+  subtotal: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Purchase {
+  id: string;
+  supplierId: string;
+  userId: string;
+  invoiceNumber: string;
+  purchaseDate: string;
+  purchaseType: PurchaseType;
+  totalAmount: number;
+  paidAmount: number;
+  remainingDebt: number;
+  dueDate?: string;
+  status: PurchaseStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  // Relations
+  items?: PurchaseItem[];
+  supplier?: {
+    id: string;
+    code: string;
+    name: string;
+    phone?: string;
+    address?: string;
+    contactPerson?: string;
+  };
+  debt?: {
+    id: string;
+    totalAmount: number;
+    paidAmount: number;
+    remainingAmount: number;
+    status: string;
+  };
+}
+
+export interface CreatePurchaseRequest {
+  supplierId: string;
+  supplierInvoiceNumber?: string;
+  purchaseType: PurchaseType;
+  items: {
+    productId: string;
+    quantity: number;
+    purchasePrice: number;
+    sellingPrice: number;
+    expDate?: string;
+  }[];
+  paidAmount?: number;
+  dueDate?: string;
+  notes?: string;
+}
+
+export interface PurchaseStats {
+  totalPurchases: number;
+  totalSpending: string;
+  tunaiPurchases: number;
+  kreditPurchases: number;
+  konsinyasiPurchases: number;
+  pendingDebts: string;
 }
 
 // ============================================

@@ -1,5 +1,6 @@
 // src/types/index.ts
 import type { ColumnDef } from "@tanstack/react-table";
+
 // ============================================
 // ENUMS
 // ============================================
@@ -30,6 +31,24 @@ export enum StockMovementType {
   OUT = "OUT",
   RETURN = "RETURN",
   ADJUSTMENT = "ADJUSTMENT",
+}
+
+export enum ProductType {
+  CASH = "Tunai",
+  INSTALLMENT = "Beli Putus",
+  CONSIGNMENT = "Konsinyasi",
+}
+
+export enum PurchaseType {
+  CASH = "Cash",
+  CREDIT = "Hutang",
+}
+
+export enum StockStatus {
+  NORMAL = "Normal",
+  LOW = "Hampir Habis",
+  OVER = "Over Stock",
+  EMPTY = "Habis",
 }
 
 // ============================================
@@ -78,7 +97,7 @@ export interface AuthState {
 
 export interface Member {
   id: string;
-  uniqueId: string; // BDG-001
+  uniqueId: string;
   nik: string;
   fullName: string;
   address: string;
@@ -86,7 +105,7 @@ export interface Member {
   regionName: string;
   whatsapp: string;
   gender: Gender;
-  totalDebt: number; // Total hutang ke koperasi
+  totalDebt: number;
   totalTransactions: number;
   monthlySpending: number;
   totalPoints: number;
@@ -127,82 +146,59 @@ export interface Category {
 
 export interface Supplier {
   id: string;
+  code: string;
   name: string;
   address: string;
   phone: string;
   email?: string;
-  totalDebt: number; // Total hutang koperasi ke supplier
+  totalDebt: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 // ============================================
-// PRODUCT (BARANG)
+// PRODUCT (BARANG) - FIXED!
 // ============================================
 
 export interface Product {
   id: string;
   sku: string;
-  name: string;
-  categoryId: string;
-  categoryName: string;
-  supplierId: string;
-  supplierName: string;
-  purchasePrice: number; // Harga beli
-  sellingPrice: number; // Harga jual
-  stock: number;
-  minStock: number;
-  maxStock: number;
-  unit: string; // pcs, kg, liter, dll
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export enum ProductType {
-  CASH = "Tunai",
-  INSTALLMENT = "Beli Putus",
-  CONSIGNMENT = "Konsinyasi",
-}
-
-export enum PurchaseType {
-  CASH = "Cash",
-  CREDIT = "Hutang",
-}
-
-export enum StockStatus {
-  NORMAL = "Normal",
-  LOW = "Hampir Habis",
-  OVER = "Over Stock",
-  EMPTY = "Habis",
-}
-
-export interface Product {
-  id: string;
   barcode: string;
   name: string;
   categoryId: string;
-  categoryName: string;
   supplierId: string;
-  supplierName: string;
   productType: ProductType;
   purchaseType: PurchaseType;
   invoiceNo?: string;
   expiryDate?: string;
   description?: string;
-  purchasePrice: number; // Harga beli
-  sellingPriceGeneral: number; // Harga jual umum
-  sellingPriceMember: number; // Harga jual anggota
-  points: number; // Point untuk member
+  purchasePrice: number;
+  sellingPriceGeneral: number;
+  sellingPriceMember: number;
+  sellingPrice: number; // Alias untuk compatibility
+  points: number;
   stock: number;
   minStock: number;
   maxStock: number;
-  unit: string; // PCS, Gram, Kg, ml
+  unit: string;
   stockStatus: StockStatus;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  // Nested objects (dari JOIN backend)
+  category?: {
+    id: string;
+    name: string;
+  };
+  supplier?: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  // Alternative flat properties
+  categoryName?: string;
+  supplierName?: string;
 }
 
 export interface CreateProductRequest {
@@ -225,6 +221,10 @@ export interface CreateProductRequest {
   unit: string;
 }
 
+export interface UpdateProductRequest extends Partial<CreateProductRequest> {
+  id: string;
+}
+
 // ============================================
 // TRANSACTION (TRANSAKSI)
 // ============================================
@@ -234,7 +234,7 @@ export interface TransactionItem {
   productId: string;
   productName: string;
   quantity: number;
-  price: number; // Harga saat transaksi
+  price: number;
   subtotal: number;
 }
 
@@ -392,8 +392,8 @@ export interface StockOpname {
 
 export interface PointSetting {
   id: string;
-  minPurchase: number; // Minimal pembelian untuk dapat poin
-  pointsPerAmount: number; // Poin per jumlah rupiah
+  minPurchase: number;
+  pointsPerAmount: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -416,9 +416,9 @@ export interface PointHistory {
 
 export interface CreditSetting {
   id: string;
-  maxCreditLimit: number; // Limit kredit maksimal per member
-  maxCreditDays: number; // Maksimal hari kredit
-  interestRate: number; // Bunga per bulan (%)
+  maxCreditLimit: number;
+  maxCreditDays: number;
+  interestRate: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -541,7 +541,7 @@ export interface ApiError {
 
 export interface DataTableProps<T> {
   data: T[];
-  columns: ColumnDef<T>[]; // Ganti any dengan ColumnDef<T>
+  columns: ColumnDef<T>[];
   searchKey?: string;
   isLoading?: boolean;
   pagination?: boolean;

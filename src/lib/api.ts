@@ -174,50 +174,107 @@ export const handleApiError = (error: unknown): string => {
 // ============================================
 
 export const apiClient = {
-  // GET request
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // GET request - ✅ FIXED: Handle multiple response structures
   get: async <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
-    const response = await api.get<ApiResponse<T>>(url, config);
-    return response.data.data;
+    const response = await api.get(url, config);
+
+    console.log(`🔍 API GET ${url}:`, response.data);
+
+    // ✅ Case 1: Response has nested data.data structure
+    if (response.data?.data !== undefined) {
+      return response.data.data as T;
+    }
+
+    // ✅ Case 2: Response has single data property
+    if (response.data !== undefined) {
+      return response.data as T;
+    }
+
+    // ✅ Case 3: Response is the data itself (no wrapper)
+    return response as T;
   },
 
-  // POST request
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // POST request - ✅ FIXED: Handle multiple response structures
   post: async <T>(
     url: string,
     data?: any,
     config?: AxiosRequestConfig
   ): Promise<T> => {
-    const response = await api.post<ApiResponse<T>>(url, data, config);
-    return response.data.data;
+    const response = await api.post(url, data, config);
+
+    console.log(`🔍 API POST ${url}:`, response.data);
+
+    // ✅ Case 1: Response has nested data.data structure
+    if (response.data?.data !== undefined) {
+      return response.data.data as T;
+    }
+
+    // ✅ Case 2: Response has single data property
+    if (response.data !== undefined) {
+      return response.data as T;
+    }
+
+    // ✅ Case 3: Response is the data itself
+    return response as T;
   },
 
-  // PUT request
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // PUT request - ✅ FIXED: Handle multiple response structures
   put: async <T>(
     url: string,
     data?: any,
     config?: AxiosRequestConfig
   ): Promise<T> => {
-    const response = await api.put<ApiResponse<T>>(url, data, config);
-    return response.data.data;
+    const response = await api.put(url, data, config);
+
+    console.log(`🔍 API PUT ${url}:`, response.data);
+
+    if (response.data?.data !== undefined) {
+      return response.data.data as T;
+    }
+
+    if (response.data !== undefined) {
+      return response.data as T;
+    }
+
+    return response as T;
   },
 
-  // PATCH request
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // PATCH request - ✅ FIXED: Handle multiple response structures
   patch: async <T>(
     url: string,
     data?: any,
     config?: AxiosRequestConfig
   ): Promise<T> => {
-    const response = await api.patch<ApiResponse<T>>(url, data, config);
-    return response.data.data;
+    const response = await api.patch(url, data, config);
+
+    console.log(`🔍 API PATCH ${url}:`, response.data);
+
+    if (response.data?.data !== undefined) {
+      return response.data.data as T;
+    }
+
+    if (response.data !== undefined) {
+      return response.data as T;
+    }
+
+    return response as T;
   },
 
-  // DELETE request
+  // DELETE request - ✅ FIXED: Handle multiple response structures
   delete: async <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
-    const response = await api.delete<ApiResponse<T>>(url, config);
-    return response.data.data;
+    const response = await api.delete(url, config);
+
+    console.log(`🔍 API DELETE ${url}:`, response.data);
+
+    if (response.data?.data !== undefined) {
+      return response.data.data as T;
+    }
+
+    if (response.data !== undefined) {
+      return response.data as T;
+    }
+
+    return response as T;
   },
 };
 

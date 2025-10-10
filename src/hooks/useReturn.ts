@@ -1,3 +1,4 @@
+// src/hooks/useReturn.ts - COMPLETE REPLACEMENT
 "use client";
 import useSWR from "swr";
 import { useState } from "react";
@@ -15,9 +16,38 @@ import {
   ReturnStats,
 } from "@/types/return";
 
+// ✅ FIXED FETCHER - Handle berbagai struktur response
 const fetcher = async (url: string) => {
-  const response = await apiClient.get(url);
-  return response.data.data || [];
+  try {
+    const response = await apiClient.get(url);
+
+    console.log("🔍 Return Hook - Fetcher Response:", { url, response });
+
+    // ✅ Case 1: apiClient.get sudah extract data, response adalah array
+    if (Array.isArray(response)) {
+      console.log("✅ Direct array response:", response.length, "items");
+      return response;
+    }
+
+    // ✅ Case 2: Response punya property data yang array
+    if (response && typeof response === "object") {
+      const data = (response as any).data;
+
+      if (Array.isArray(data)) {
+        console.log("✅ Array in response.data:", data.length, "items");
+        return data;
+      }
+    }
+
+    console.warn(
+      "⚠️ Unexpected response structure, returning empty array:",
+      response
+    );
+    return [];
+  } catch (error) {
+    console.error("❌ Fetcher error:", error);
+    return [];
+  }
 };
 
 // ============================================
@@ -37,17 +67,29 @@ export function usePurchaseReturns(params?: PurchaseReturnQueryParams) {
     }, {} as Record<string, string>)
   ).toString();
 
-  const { data, error, isLoading, mutate } = useSWR(
-    `/returns/purchases?${queryString}`,
+  const endpoint = `/returns/purchases?${queryString}`;
+
+  const { data, error, isLoading, mutate } = useSWR<PurchaseReturn[]>(
+    endpoint,
     fetcher,
     {
       revalidateOnFocus: false,
       dedupingInterval: 5000,
+      onSuccess: (data) => {
+        console.log(
+          "✅ usePurchaseReturns - Data loaded:",
+          data?.length,
+          "items"
+        );
+      },
+      onError: (error) => {
+        console.error("❌ usePurchaseReturns - Error:", error);
+      },
     }
   );
 
   return {
-    returns: data as PurchaseReturn[] | undefined,
+    returns: data,
     isLoading,
     isError: error,
     mutate,
@@ -91,17 +133,25 @@ export function useSalesReturns(params?: SalesReturnQueryParams) {
     }, {} as Record<string, string>)
   ).toString();
 
-  const { data, error, isLoading, mutate } = useSWR(
-    `/returns/sales?${queryString}`,
+  const endpoint = `/returns/sales?${queryString}`;
+
+  const { data, error, isLoading, mutate } = useSWR<SalesReturn[]>(
+    endpoint,
     fetcher,
     {
       revalidateOnFocus: false,
       dedupingInterval: 5000,
+      onSuccess: (data) => {
+        console.log("✅ useSalesReturns - Data loaded:", data?.length, "items");
+      },
+      onError: (error) => {
+        console.error("❌ useSalesReturns - Error:", error);
+      },
     }
   );
 
   return {
-    returns: data as SalesReturn[] | undefined,
+    returns: data,
     isLoading,
     isError: error,
     mutate,

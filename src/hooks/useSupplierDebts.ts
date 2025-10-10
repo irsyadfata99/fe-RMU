@@ -1,6 +1,6 @@
-// src/hooks/useSupplierDebts.ts
-"use client";
-
+// ============================================
+// FILE 3: src/hooks/useSupplierDebts.ts
+// ============================================
 import useSWR from "swr";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -20,17 +20,68 @@ import {
 } from "@/types/debt";
 import { PaginatedResponse } from "@/types";
 
-// ============================================
-// GET ALL SUPPLIER DEBTS (with filters)
-// ============================================
+// ✅ FIXED FETCHER for paginated debts
+const supplierDebtsFetcher = async (
+  filters?: DebtFilters
+): Promise<PaginatedResponse<SupplierDebt>> => {
+  try {
+    const response = await getSupplierDebts(filters);
+
+    console.log("🔍 Supplier Debts Fetcher:", { filters, response });
+
+    // getSupplierDebts already returns PaginatedResponse from apiClient
+    if (response && response.data && response.pagination) {
+      console.log("✅ Paginated response:", response.data.length, "debts");
+      return response;
+    }
+
+    // Fallback: if response is just data array
+    if (Array.isArray(response)) {
+      console.log(
+        "✅ Direct array (creating pagination):",
+        response.length,
+        "debts"
+      );
+      return {
+        data: response,
+        pagination: {
+          page: 1,
+          limit: response.length,
+          total: response.length,
+          totalPages: 1,
+        },
+      };
+    }
+
+    console.warn("⚠️ Unexpected debt response structure:", response);
+    return {
+      data: [],
+      pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+    };
+  } catch (error) {
+    console.error("❌ Supplier debts fetcher error:", error);
+    return {
+      data: [],
+      pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+    };
+  }
+};
+
 export function useSupplierDebts(filters?: DebtFilters) {
   const queryKey = `/payments/supplier-debts?${JSON.stringify(filters || {})}`;
 
   const { data, error, isLoading, mutate } = useSWR<
     PaginatedResponse<SupplierDebt>
-  >(queryKey, () => getSupplierDebts(filters), {
+  >(queryKey, () => supplierDebtsFetcher(filters), {
     revalidateOnFocus: false,
     dedupingInterval: 5000,
+    onSuccess: (data) => {
+      console.log(
+        "✅ useSupplierDebts loaded:",
+        data?.data?.length || 0,
+        "debts"
+      );
+    },
   });
 
   return {
@@ -42,9 +93,6 @@ export function useSupplierDebts(filters?: DebtFilters) {
   };
 }
 
-// ============================================
-// GET SINGLE SUPPLIER DEBT DETAIL
-// ============================================
 export function useSupplierDebt(debtId: string | null) {
   const { data, error, isLoading, mutate } = useSWR<SupplierDebt>(
     debtId ? `/payments/supplier-debts/${debtId}` : null,
@@ -62,9 +110,6 @@ export function useSupplierDebt(debtId: string | null) {
   };
 }
 
-// ============================================
-// GET DEBTS BY SUPPLIER
-// ============================================
 export function useSupplierDebtsBySupplier(supplierId: string | null) {
   const { data, error, isLoading, mutate } = useSWR<SupplierDebtSummary>(
     supplierId ? `/payments/supplier-debts/supplier/${supplierId}/list` : null,
@@ -82,15 +127,9 @@ export function useSupplierDebtsBySupplier(supplierId: string | null) {
   };
 }
 
-// ============================================
-// SUPPLIER DEBT ACTIONS
-// ============================================
 export function useSupplierDebtActions() {
   const [isLoading, setIsLoading] = useState(false);
 
-  /**
-   * Pay supplier debt
-   */
   const payDebt = async (debtId: string, data: PaySupplierDebtRequest) => {
     setIsLoading(true);
     try {
@@ -113,15 +152,11 @@ export function useSupplierDebtActions() {
     }
   };
 
-  /**
-   * Export supplier debts to Excel
-   */
   const exportToExcel = async (filters?: DebtExportFilters) => {
     setIsLoading(true);
     try {
       const blob = await exportSupplierDebts(filters);
 
-      // Create download link
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -131,7 +166,6 @@ export function useSupplierDebtActions() {
       document.body.appendChild(a);
       a.click();
 
-      // Cleanup
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 

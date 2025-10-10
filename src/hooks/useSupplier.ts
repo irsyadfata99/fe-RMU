@@ -1,12 +1,50 @@
 // ============================================
-// src/hooks/useSupplier.ts
+// FILE 1: src/hooks/useSupplier.ts
 // ============================================
 import useSWR from "swr";
 import { Supplier } from "@/types";
-import api from "@/lib/api";
-import { arrayFetcher, itemFetcher, ensureArray } from "@/lib/swr-fetcher";
+import { apiClient } from "@/lib/api";
 import { useState } from "react";
 import { toast } from "sonner";
+
+// ✅ FIXED FETCHER
+const suppliersFetcher = async (url: string): Promise<Supplier[]> => {
+  try {
+    const response = await apiClient.get<any>(url);
+
+    console.log("🔍 Suppliers Fetcher:", { url, response });
+
+    if (Array.isArray(response)) {
+      console.log("✅ Direct array:", response.length, "suppliers");
+      return response;
+    }
+
+    if (response?.data && Array.isArray(response.data)) {
+      console.log(
+        "✅ Array in response.data:",
+        response.data.length,
+        "suppliers"
+      );
+      return response.data;
+    }
+
+    console.warn("⚠️ Unexpected response structure:", response);
+    return [];
+  } catch (error) {
+    console.error("❌ Suppliers fetcher error:", error);
+    return [];
+  }
+};
+
+const supplierFetcher = async (url: string): Promise<Supplier | null> => {
+  try {
+    const response = await apiClient.get<Supplier>(url);
+    return response;
+  } catch (error) {
+    console.error("❌ Supplier fetcher error:", error);
+    return null;
+  }
+};
 
 export function useSuppliers(params?: {
   page?: number;
@@ -23,14 +61,18 @@ export function useSuppliers(params?: {
     }, {} as Record<string, string>)
   ).toString();
 
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR<Supplier[]>(
     `/suppliers?${queryString}`,
-    arrayFetcher,
-    { revalidateOnFocus: false }
+    suppliersFetcher,
+    {
+      revalidateOnFocus: false,
+      onSuccess: (data) =>
+        console.log("✅ useSuppliers loaded:", data?.length, "suppliers"),
+    }
   );
 
   return {
-    suppliers: ensureArray(data),
+    suppliers: data || [],
     isLoading,
     isError: error,
     mutate,
@@ -38,9 +80,9 @@ export function useSuppliers(params?: {
 }
 
 export function useSupplier(id: string) {
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR<Supplier | null>(
     id ? `/suppliers/${id}` : null,
-    itemFetcher,
+    supplierFetcher,
     { revalidateOnFocus: false }
   );
 
@@ -58,7 +100,7 @@ export function useSupplierActions() {
   const createSupplier = async (data: any) => {
     setIsLoading(true);
     try {
-      const supplier = await api.post<Supplier>("/suppliers", data);
+      const supplier = await apiClient.post<Supplier>("/suppliers", data);
       toast.success("Supplier berhasil ditambahkan");
       return supplier;
     } finally {
@@ -69,7 +111,7 @@ export function useSupplierActions() {
   const updateSupplier = async (id: string, data: any) => {
     setIsLoading(true);
     try {
-      const supplier = await api.put<Supplier>(`/suppliers/${id}`, data);
+      const supplier = await apiClient.put<Supplier>(`/suppliers/${id}`, data);
       toast.success("Supplier berhasil diupdate");
       return supplier;
     } finally {
@@ -80,7 +122,7 @@ export function useSupplierActions() {
   const deleteSupplier = async (id: string) => {
     setIsLoading(true);
     try {
-      await api.delete(`/suppliers/${id}`);
+      await apiClient.delete(`/suppliers/${id}`);
       toast.success("Supplier berhasil dihapus");
     } finally {
       setIsLoading(false);
@@ -90,7 +132,7 @@ export function useSupplierActions() {
   const toggleActive = async (id: string) => {
     setIsLoading(true);
     try {
-      await api.patch(`/suppliers/${id}/toggle`);
+      await apiClient.patch(`/suppliers/${id}/toggle`, {});
       toast.success("Status supplier berhasil diubah");
     } finally {
       setIsLoading(false);

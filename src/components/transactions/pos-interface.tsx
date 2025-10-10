@@ -135,14 +135,40 @@ export function POSInterface() {
   const searchMembers = async (query: string) => {
     setIsLoadingMembers(true);
     try {
-      const members = await apiClient.get<Member[]>(
+      // Panggil API dengan proper error handling
+      const response = await apiClient.get<Member[]>(
         `/members?search=${query}&limit=10`
       );
+
+      // ✅ Handle berbagai kemungkinan struktur response
+      let members: Member[] = [];
+
+      // Case 1: response adalah array langsung
+      if (Array.isArray(response)) {
+        members = response;
+      }
+      // Case 2: response.data adalah array
+      else if (response && typeof response === "object") {
+        if (Array.isArray((response as any).data)) {
+          members = (response as any).data;
+        }
+        // Case 3: response.data.data adalah array (nested)
+        else if (
+          (response as any).data &&
+          Array.isArray((response as any).data.data)
+        ) {
+          members = (response as any).data.data;
+        }
+      }
+
+      console.log("✅ Member search response:", { query, response, members });
+
       setMemberSuggestions(members);
       setShowSuggestions(true);
     } catch (error) {
-      console.error("Error searching members:", error);
+      console.error("❌ Error searching members:", error);
       setMemberSuggestions([]);
+      toast.error("Gagal mencari member");
     } finally {
       setIsLoadingMembers(false);
     }

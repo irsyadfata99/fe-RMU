@@ -1,7 +1,7 @@
 // src/app/dashboard/transaksi/return/riwayat/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   usePurchaseReturns,
   useSalesReturns,
@@ -29,7 +29,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
-import { PlusCircle, History, RotateCcw } from "lucide-react";
+import { PlusCircle, History, RotateCcw, PackageX } from "lucide-react";
 import Link from "next/link";
 
 export default function ReturnHistoryPage() {
@@ -84,6 +84,12 @@ export default function ReturnHistoryPage() {
     rejectSalesReturn,
     isLoading: isActioning,
   } = useReturnActions();
+
+  // ✅ DEBUG: Log data yang diterima
+  useEffect(() => {
+    console.log("📦 Purchase Returns:", purchaseReturns);
+    console.log("📦 Sales Returns:", salesReturns);
+  }, [purchaseReturns, salesReturns]);
 
   const handleView = (returnData: any, type: "purchase" | "sales") => {
     setSelectedReturn(returnData);
@@ -141,6 +147,10 @@ export default function ReturnHistoryPage() {
     }
   };
 
+  // ✅ Helper: Check if data is empty
+  const hasPurchaseReturns = purchaseReturns && purchaseReturns.length > 0;
+  const hasSalesReturns = salesReturns && salesReturns.length > 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -175,8 +185,22 @@ export default function ReturnHistoryPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
         <TabsList>
-          <TabsTrigger value="purchase">Retur Pembelian</TabsTrigger>
-          <TabsTrigger value="sales">Retur Penjualan</TabsTrigger>
+          <TabsTrigger value="purchase">
+            Retur Pembelian
+            {!loadingPurchase && hasPurchaseReturns && (
+              <span className="ml-2 rounded-full bg-primary/20 px-2 py-0.5 text-xs">
+                {purchaseReturns.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="sales">
+            Retur Penjualan
+            {!loadingSales && hasSalesReturns && (
+              <span className="ml-2 rounded-full bg-primary/20 px-2 py-0.5 text-xs">
+                {salesReturns.length}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         {/* Filters */}
@@ -205,18 +229,18 @@ export default function ReturnHistoryPage() {
             <div className="flex h-96 items-center justify-center">
               <LoadingSpinner size="lg" />
             </div>
-          ) : (
+          ) : hasPurchaseReturns ? (
             <ReturnTable
-              returns={purchaseReturns || []}
+              returns={purchaseReturns}
               type="purchase"
               onView={(id) => {
-                const returnData = purchaseReturns?.find((r) => r.id === id);
+                const returnData = purchaseReturns.find((r) => r.id === id);
                 if (returnData) handleView(returnData, "purchase");
               }}
               onApprove={
                 user?.role === "ADMIN"
                   ? (id) => {
-                      const returnData = purchaseReturns?.find(
+                      const returnData = purchaseReturns.find(
                         (r) => r.id === id
                       );
                       if (returnData)
@@ -227,7 +251,7 @@ export default function ReturnHistoryPage() {
               onReject={
                 user?.role === "ADMIN"
                   ? (id) => {
-                      const returnData = purchaseReturns?.find(
+                      const returnData = purchaseReturns.find(
                         (r) => r.id === id
                       );
                       if (returnData) handleReject(id, returnData.returnNumber);
@@ -236,6 +260,27 @@ export default function ReturnHistoryPage() {
               }
               userRole={user?.role || "KASIR"}
             />
+          ) : (
+            // ✅ Enhanced Empty State
+            <div className="flex flex-col items-center justify-center h-96 rounded-lg border border-dashed bg-muted/30">
+              <PackageX className="h-16 w-16 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                Tidak ada retur pembelian ditemukan
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
+                {status && status !== "all"
+                  ? `Tidak ada retur dengan status "${status}". Coba ubah filter atau buat retur baru.`
+                  : "Belum ada transaksi retur pembelian. Mulai buat retur pembelian dari halaman transaksi pembelian."}
+              </p>
+              {user?.role === "ADMIN" && (
+                <Link href="/dashboard/transaksi/return/pembelian">
+                  <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Buat Retur Pembelian
+                  </Button>
+                </Link>
+              )}
+            </div>
           )}
         </TabsContent>
 
@@ -245,18 +290,18 @@ export default function ReturnHistoryPage() {
             <div className="flex h-96 items-center justify-center">
               <LoadingSpinner size="lg" />
             </div>
-          ) : (
+          ) : hasSalesReturns ? (
             <ReturnTable
-              returns={salesReturns || []}
+              returns={salesReturns}
               type="sales"
               onView={(id) => {
-                const returnData = salesReturns?.find((r) => r.id === id);
+                const returnData = salesReturns.find((r) => r.id === id);
                 if (returnData) handleView(returnData, "sales");
               }}
               onApprove={
                 user?.role === "ADMIN"
                   ? (id) => {
-                      const returnData = salesReturns?.find((r) => r.id === id);
+                      const returnData = salesReturns.find((r) => r.id === id);
                       if (returnData)
                         handleApprove(id, returnData.returnNumber);
                     }
@@ -265,13 +310,34 @@ export default function ReturnHistoryPage() {
               onReject={
                 user?.role === "ADMIN"
                   ? (id) => {
-                      const returnData = salesReturns?.find((r) => r.id === id);
+                      const returnData = salesReturns.find((r) => r.id === id);
                       if (returnData) handleReject(id, returnData.returnNumber);
                     }
                   : undefined
               }
               userRole={user?.role || "KASIR"}
             />
+          ) : (
+            // ✅ Enhanced Empty State
+            <div className="flex flex-col items-center justify-center h-96 rounded-lg border border-dashed bg-muted/30">
+              <PackageX className="h-16 w-16 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                Tidak ada retur penjualan ditemukan
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
+                {status && status !== "all"
+                  ? `Tidak ada retur dengan status "${status}". Coba ubah filter atau buat retur baru.`
+                  : "Belum ada transaksi retur penjualan. Mulai buat retur penjualan dari halaman transaksi penjualan."}
+              </p>
+              {user?.role === "ADMIN" && (
+                <Link href="/dashboard/transaksi/return/penjualan">
+                  <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Buat Retur Penjualan
+                  </Button>
+                </Link>
+              )}
+            </div>
           )}
         </TabsContent>
       </Tabs>

@@ -1,6 +1,7 @@
-// src/components/purchases/purchase-item-row.tsx
+// ============================================
+// src/components/purchases/purchase-item-row.tsx (CRITICAL FIX)
+// ============================================
 "use client";
-
 import { useState, useEffect } from "react";
 import { Product } from "@/types";
 import { Input } from "@/components/ui/input";
@@ -8,28 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import useSWR from "swr";
-import { apiClient } from "@/lib/api";
+import { arrayFetcher, ensureArray } from "@/lib/swr-fetcher";
 
 interface PurchaseItemRowProps {
   index: number;
   onRemove: (index: number) => void;
-  onChange: (
-    index: number,
-    data: {
-      productId: string;
-      quantity: number;
-      purchasePrice: number;
-      sellingPrice: number;
-      expDate?: string;
-    }
-  ) => void;
-  initialData?: {
-    productId: string;
-    quantity: number;
-    purchasePrice: number;
-    sellingPrice: number;
-    expDate?: string;
-  };
+  onChange: (index: number, data: any) => void;
+  initialData?: any;
 }
 
 export function PurchaseItemRow({
@@ -39,7 +25,7 @@ export function PurchaseItemRow({
   initialData,
 }: PurchaseItemRowProps) {
   const [search, setSearch] = useState("");
-  const [showResults, setShowResults] = useState(false); // ✅ TAMBAHKAN INI
+  const [showResults, setShowResults] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(initialData?.quantity ?? 1);
   const [purchasePrice, setPurchasePrice] = useState(
@@ -50,21 +36,13 @@ export function PurchaseItemRow({
   );
   const [expDate, setExpDate] = useState(initialData?.expDate ?? "");
 
-  // Product autocomplete
-  const { data: products } = useSWR(
+  // ✅ FIX: Use arrayFetcher
+  const { data: productsData } = useSWR(
     search.length >= 2 ? `/products/autocomplete?query=${search}` : null,
-    (url) => apiClient.get<Product[]>(url)
+    arrayFetcher
   );
 
-  // Load initial product if editing
-  useEffect(() => {
-    if (initialData?.productId && !selectedProduct) {
-      apiClient
-        .get<Product>(`/products/${initialData.productId}`)
-        .then(setSelectedProduct)
-        .catch(console.error);
-    }
-  }, [initialData, selectedProduct]);
+  const products = ensureArray(productsData);
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
@@ -82,78 +60,17 @@ export function PurchaseItemRow({
     });
   };
 
-  const handleQuantityChange = (newQuantity: number) => {
-    const validQuantity =
-      isNaN(newQuantity) || newQuantity < 1 ? 1 : newQuantity;
-    setQuantity(validQuantity);
-    if (selectedProduct) {
-      onChange(index, {
-        productId: selectedProduct.id,
-        quantity: validQuantity,
-        purchasePrice,
-        sellingPrice,
-        expDate,
-      });
-    }
-  };
-
-  const handlePurchasePriceChange = (newPrice: number) => {
-    const validPrice = isNaN(newPrice) || newPrice < 0 ? 0 : newPrice;
-    setPurchasePrice(validPrice);
-    if (selectedProduct) {
-      onChange(index, {
-        productId: selectedProduct.id,
-        quantity,
-        purchasePrice: validPrice,
-        sellingPrice,
-        expDate,
-      });
-    }
-  };
-
-  const handleSellingPriceChange = (newPrice: number) => {
-    const validPrice = isNaN(newPrice) || newPrice < 0 ? 0 : newPrice;
-    setSellingPrice(validPrice);
-    if (selectedProduct) {
-      onChange(index, {
-        productId: selectedProduct.id,
-        quantity,
-        purchasePrice,
-        sellingPrice: validPrice,
-        expDate,
-      });
-    }
-  };
-
-  const handleExpDateChange = (newDate: string) => {
-    setExpDate(newDate);
-    if (selectedProduct) {
-      onChange(index, {
-        productId: selectedProduct.id,
-        quantity,
-        purchasePrice,
-        sellingPrice,
-        expDate: newDate,
-      });
-    }
-  };
-
-  // ✅ FIX: Validasi subtotal untuk menghindari NaN
   const subtotal = (quantity || 0) * (purchasePrice || 0);
   const displaySubtotal = isNaN(subtotal) ? 0 : subtotal;
 
   return (
     <div className="grid grid-cols-12 gap-2 items-start p-3 border rounded-lg bg-muted/30">
-      {/* Product Search */}
       <div className="col-span-3 relative">
         {selectedProduct ? (
           <div className="space-y-1">
             <p className="font-medium text-sm">{selectedProduct.name}</p>
             <p className="text-xs text-muted-foreground">
               SKU: {selectedProduct.sku}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Stok: {selectedProduct.stock} {selectedProduct.unit}
             </p>
           </div>
         ) : (
@@ -168,9 +85,9 @@ export function PurchaseItemRow({
               onFocus={() => setShowResults(true)}
               className="h-8"
             />
-            {showResults && products && products.length > 0 && (
+            {showResults && products.length > 0 && (
               <div className="absolute z-50 mt-1 w-full bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                {products.map((product) => (
+                {products.map((product: Product) => (
                   <button
                     key={product.id}
                     type="button"
@@ -189,19 +106,29 @@ export function PurchaseItemRow({
         )}
       </div>
 
-      {/* Quantity */}
       <div className="col-span-1">
         <Input
           type="number"
           value={quantity || ""}
-          onChange={(e) => handleQuantityChange(Number(e.target.value))}
+          onChange={(e) => {
+            const val = Number(e.target.value);
+            setQuantity(val);
+            if (selectedProduct) {
+              onChange(index, {
+                productId: selectedProduct.id,
+                quantity: val,
+                purchasePrice,
+                sellingPrice,
+                expDate,
+              });
+            }
+          }}
           min={1}
           disabled={!selectedProduct}
           className="h-8"
         />
       </div>
 
-      {/* Unit */}
       <div className="col-span-1">
         <Input
           value={selectedProduct?.unit || "-"}
@@ -210,49 +137,79 @@ export function PurchaseItemRow({
         />
       </div>
 
-      {/* Purchase Price */}
       <div className="col-span-2">
         <Input
           type="number"
           value={purchasePrice || ""}
-          onChange={(e) => handlePurchasePriceChange(Number(e.target.value))}
+          onChange={(e) => {
+            const val = Number(e.target.value);
+            setPurchasePrice(val);
+            if (selectedProduct) {
+              onChange(index, {
+                productId: selectedProduct.id,
+                quantity,
+                purchasePrice: val,
+                sellingPrice,
+                expDate,
+              });
+            }
+          }}
           min={0}
           disabled={!selectedProduct}
           className="h-8"
         />
       </div>
 
-      {/* Selling Price */}
       <div className="col-span-2">
         <Input
           type="number"
           value={sellingPrice || ""}
-          onChange={(e) => handleSellingPriceChange(Number(e.target.value))}
+          onChange={(e) => {
+            const val = Number(e.target.value);
+            setSellingPrice(val);
+            if (selectedProduct) {
+              onChange(index, {
+                productId: selectedProduct.id,
+                quantity,
+                purchasePrice,
+                sellingPrice: val,
+                expDate,
+              });
+            }
+          }}
           min={0}
           disabled={!selectedProduct}
           className="h-8"
         />
       </div>
 
-      {/* Exp Date */}
       <div className="col-span-2">
         <Input
           type="date"
           value={expDate || ""}
-          onChange={(e) => handleExpDateChange(e.target.value)}
+          onChange={(e) => {
+            setExpDate(e.target.value);
+            if (selectedProduct) {
+              onChange(index, {
+                productId: selectedProduct.id,
+                quantity,
+                purchasePrice,
+                sellingPrice,
+                expDate: e.target.value,
+              });
+            }
+          }}
           disabled={!selectedProduct}
           className="h-8"
         />
       </div>
 
-      {/* Subtotal */}
       <div className="col-span-1 flex items-center justify-end">
         <p className="text-sm font-semibold">
           {formatCurrency(displaySubtotal)}
         </p>
       </div>
 
-      {/* Remove Button */}
       <div className="col-span-1 flex items-center justify-center">
         <Button
           type="button"

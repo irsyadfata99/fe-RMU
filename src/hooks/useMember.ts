@@ -1,125 +1,137 @@
 // src/hooks/useMember.ts
-"use client";
-
 import useSWR from "swr";
+import { apiClient } from "@/lib/api";
 import { Member } from "@/types";
-import api from "@/lib/api";
-import { useState } from "react";
 import { toast } from "sonner";
 
-const fetcher = async (url: string) => {
-  const response = await api.get(url);
-  return response.data.data || [];
-};
+// ✅ Define proper interface for member stats
+interface MemberStats {
+  totalMembers: number;
+  activeMembers: number;
+  totalPoints: number;
+  totalTransactions: number;
+}
 
-export function useMembers(params?: {
-  page?: number;
-  limit?: number;
+interface UseMembersParams {
   search?: string;
   regionCode?: string;
   isActive?: boolean;
-}) {
-  const queryString = new URLSearchParams(
-    Object.entries(params || {}).reduce((acc, [key, value]) => {
-      if (value !== undefined && value !== null) {
-        acc[key] = String(value);
-      }
-      return acc;
-    }, {} as Record<string, string>)
-  ).toString();
+  page?: number;
+  limit?: number;
+}
 
-  const { data, error, isLoading, mutate } = useSWR(
-    `/members?${queryString}`,
-    fetcher,
-    { revalidateOnFocus: false }
+export function useMembers(params?: UseMembersParams) {
+  const queryParams = new URLSearchParams();
+
+  if (params?.search) queryParams.append("search", params.search);
+  if (params?.regionCode) queryParams.append("regionCode", params.regionCode);
+  if (params?.isActive !== undefined)
+    queryParams.append("isActive", String(params.isActive));
+  if (params?.page) queryParams.append("page", String(params.page));
+  if (params?.limit) queryParams.append("limit", String(params.limit));
+
+  const queryString = queryParams.toString();
+  const endpoint = `/members${queryString ? `?${queryString}` : ""}`;
+
+  const { data, error, isLoading, mutate } = useSWR<Member[]>(
+    endpoint,
+    async (url: string) => {
+      const response = await apiClient.get<Member[]>(url);
+      return Array.isArray(response) ? response : [];
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    }
   );
 
   return {
-    members: data,
+    members: data || [],
     isLoading,
     isError: error,
     mutate,
   };
 }
 
-export function useMember(id: string) {
-  const { data, error, isLoading, mutate } = useSWR(
-    id ? `/members/${id}` : null,
-    fetcher, // ✅ FIXED: Gunakan fetcher yang sama
-    { revalidateOnFocus: false }
-  );
-
-  return {
-    member: data,
-    isLoading,
-    isError: error,
-    mutate,
-  };
-}
-
+// ✅ Fix useMemberStats to return proper typed data
 export function useMemberStats() {
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR<MemberStats>(
     "/members/stats",
-    fetcher, // ✅ FIXED: Gunakan fetcher yang sama
-    { revalidateOnFocus: false }
+    async (url: string) => {
+      try {
+        const response = await apiClient.get<MemberStats>(url);
+
+        // Ensure all required properties exist with defaults
+        return {
+          totalMembers: response.totalMembers || 0,
+          activeMembers: response.activeMembers || 0,
+          totalPoints: response.totalPoints || 0,
+          totalTransactions: response.totalTransactions || 0,
+        };
+      } catch (err) {
+        console.error("Error fetching member stats:", err);
+        // Return default values on error
+        return {
+          totalMembers: 0,
+          activeMembers: 0,
+          totalPoints: 0,
+          totalTransactions: 0,
+        };
+      }
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30000, // Cache for 30 seconds
+    }
   );
 
   return {
     stats: data,
     isLoading,
     isError: error,
+    mutate,
   };
 }
 
 export function useMemberActions() {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const updateMember = async (
-    id: string,
-    data: {
-      fullName: string;
-      address: string;
-      regionCode: string;
-      whatsapp: string;
-      gender: string;
-    }
-  ) => {
-    setIsLoading(true);
+  const updateMember = async (id: string, data: Partial<Member>) => {
     try {
-      const member = await api.put<Member>(`/members/${id}`, data);
-      toast.success("Data member berhasil diupdate");
-      return member;
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal update member");
+      const response = await apiClient.put<Member>(`/members/${id}`, data);
+      toast.success("Data member berhasil diperbarui");
+      return response;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Gagal memperbarui member";
+      toast.error(message);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const toggleActive = async (id: string) => {
-    setIsLoading(true);
     try {
-      await api.patch(`/members/${id}/toggle`);
+      const response = await apiClient.patch<Member>(
+        `/members/${id}/toggle-active`,
+        {}
+      );
       toast.success("Status member berhasil diubah");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal mengubah status");
+      return response;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Gagal mengubah status";
+      toast.error(message);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const deleteMember = async (id: string) => {
-    setIsLoading(true);
     try {
-      await api.delete(`/members/${id}`);
+      await apiClient.delete(`/members/${id}`);
       toast.success("Member berhasil dihapus");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal menghapus member");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Gagal menghapus member";
+      toast.error(message);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -127,6 +139,6 @@ export function useMemberActions() {
     updateMember,
     toggleActive,
     deleteMember,
-    isLoading,
+    isLoading: false,
   };
 }

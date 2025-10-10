@@ -1,16 +1,11 @@
 // src/hooks/useCategory.ts
 "use client";
-
 import useSWR from "swr";
 import { Category } from "@/types";
 import api from "@/lib/api";
+import { arrayFetcher, itemFetcher, ensureArray } from "@/lib/swr-fetcher";
 import { useState } from "react";
 import { toast } from "sonner";
-
-const fetcher = async (url: string) => {
-  const response = await api.get(url);
-  return response.data.data || [];
-};
 
 export function useCategories(params?: {
   page?: number;
@@ -29,12 +24,12 @@ export function useCategories(params?: {
 
   const { data, error, isLoading, mutate } = useSWR(
     `/categories?${queryString}`,
-    fetcher,
+    arrayFetcher,
     { revalidateOnFocus: false }
   );
 
   return {
-    categories: data,
+    categories: ensureArray(data),
     isLoading,
     isError: error,
     mutate,
@@ -44,7 +39,7 @@ export function useCategories(params?: {
 export function useCategory(id: string) {
   const { data, error, isLoading, mutate } = useSWR(
     id ? `/categories/${id}` : null,
-    fetcher, // ✅ FIXED: Gunakan fetcher yang sama
+    itemFetcher,
     { revalidateOnFocus: false }
   );
 
@@ -87,9 +82,6 @@ export function useCategoryActions() {
       const category = await api.put<Category>(`/categories/${id}`, data);
       toast.success("Kategori berhasil diupdate");
       return category;
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal update kategori");
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -100,9 +92,6 @@ export function useCategoryActions() {
     try {
       await api.delete(`/categories/${id}`);
       toast.success("Kategori berhasil dihapus");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal menghapus kategori");
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -113,9 +102,6 @@ export function useCategoryActions() {
     try {
       await api.patch(`/categories/${id}/toggle`);
       toast.success("Status kategori berhasil diubah");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal mengubah status");
-      throw error;
     } finally {
       setIsLoading(false);
     }

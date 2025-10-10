@@ -2,22 +2,42 @@
 "use client";
 
 import { useState } from "react";
-import { useMembers, useMemberActions, useMemberStats } from "@/hooks/useMember";
+import {
+  useMembers,
+  useMemberActions,
+  useMemberStats,
+} from "@/hooks/useMember";
 import { MemberTable } from "@/components/members/member-table";
 import { MemberDetailFull } from "@/components/members/member-detail-full";
 import { MemberEditForm } from "@/components/members/member-edit-form";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Users, TrendingUp } from "lucide-react";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { useCurrentUser } from "@/hooks/useAuth";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Member } from "@/types";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { REGIONS } from "@/constants/regions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
 
 export default function MembersManagementPage() {
   const user = useCurrentUser();
@@ -33,7 +53,11 @@ export default function MembersManagementPage() {
     regionCode: regionFilter || undefined,
   });
   const { stats, isLoading: statsLoading } = useMemberStats();
-  const { updateMember, toggleActive, isLoading: isSubmitting } = useMemberActions();
+  const {
+    updateMember,
+    toggleActive,
+    isLoading: isSubmitting,
+  } = useMemberActions();
 
   const handleEdit = (member: Member) => {
     setEditingMember(member);
@@ -45,7 +69,7 @@ export default function MembersManagementPage() {
     setIsSheetOpen(true);
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: Partial<Member>) => {
     if (!editingMember) return;
 
     try {
@@ -53,7 +77,7 @@ export default function MembersManagementPage() {
       setIsDialogOpen(false);
       setEditingMember(null);
       mutate();
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -62,7 +86,7 @@ export default function MembersManagementPage() {
     try {
       await toggleActive(id);
       mutate();
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -72,7 +96,9 @@ export default function MembersManagementPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Manajemen Member</h1>
-        <p className="text-muted-foreground">Kelola data member dan anggota koperasi</p>
+        <p className="text-muted-foreground">
+          Kelola data member dan anggota koperasi
+        </p>
       </div>
 
       {/* Stats Cards */}
@@ -80,12 +106,16 @@ export default function MembersManagementPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Member</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Member
+              </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalMembers}</div>
-              <p className="text-xs text-muted-foreground">{stats.activeMembers} aktif</p>
+              <p className="text-xs text-muted-foreground">
+                {stats.activeMembers} aktif
+              </p>
             </CardContent>
           </Card>
 
@@ -95,18 +125,26 @@ export default function MembersManagementPage() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalPoints?.toLocaleString() || 0}</div>
-              <p className="text-xs text-muted-foreground">Akumulasi semua member</p>
+              <div className="text-2xl font-bold">
+                {stats.totalPoints?.toLocaleString() || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Akumulasi semua member
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Transaksi</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Transaksi
+              </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalTransactions?.toLocaleString() || 0}</div>
+              <div className="text-2xl font-bold">
+                {stats.totalTransactions?.toLocaleString() || 0}
+              </div>
               <p className="text-xs text-muted-foreground">Semua member</p>
             </CardContent>
           </Card>
@@ -117,10 +155,20 @@ export default function MembersManagementPage() {
       <div className="flex flex-col gap-4 md:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Cari nama, NIK, atau ID member..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          <Input
+            placeholder="Cari nama, NIK, atau ID member..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
         </div>
 
-        <Select value={regionFilter || "ALL"} onValueChange={(value) => setRegionFilter(value === "ALL" ? "" : value)}>
+        <Select
+          value={regionFilter || "ALL"}
+          onValueChange={(value) =>
+            setRegionFilter(value === "ALL" ? "" : value)
+          }
+        >
           <SelectTrigger className="w-full md:w-[200px]">
             <SelectValue placeholder="Semua Wilayah" />
           </SelectTrigger>
@@ -141,7 +189,13 @@ export default function MembersManagementPage() {
           <LoadingSpinner size="lg" />
         </div>
       ) : (
-        <MemberTable members={members || []} onView={handleView} onEdit={handleEdit} onToggle={handleToggle} userRole={user?.role || "KASIR"} />
+        <MemberTable
+          members={members as Member[]}
+          onView={handleView}
+          onEdit={handleEdit}
+          onToggle={handleToggle}
+          userRole={user?.role || "KASIR"}
+        />
       )}
 
       {/* Dialog Form Edit */}
@@ -149,7 +203,9 @@ export default function MembersManagementPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Data Member</DialogTitle>
-            <DialogDescription>Perbarui informasi member. NIK tidak dapat diubah.</DialogDescription>
+            <DialogDescription>
+              Perbarui informasi member. NIK tidak dapat diubah.
+            </DialogDescription>
           </DialogHeader>
           {editingMember && (
             <MemberEditForm
@@ -170,9 +226,13 @@ export default function MembersManagementPage() {
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Detail Member</SheetTitle>
-            <SheetDescription>Informasi lengkap dan riwayat member</SheetDescription>
+            <SheetDescription>
+              Informasi lengkap dan riwayat member
+            </SheetDescription>
           </SheetHeader>
-          <div className="mt-6">{viewingMember && <MemberDetailFull member={viewingMember} />}</div>
+          <div className="mt-6">
+            {viewingMember && <MemberDetailFull member={viewingMember} />}
+          </div>
         </SheetContent>
       </Sheet>
     </div>

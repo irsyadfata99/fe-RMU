@@ -1,16 +1,12 @@
+// ============================================
 // src/hooks/useSupplier.ts
-"use client";
-
+// ============================================
 import useSWR from "swr";
 import { Supplier } from "@/types";
 import api from "@/lib/api";
+import { arrayFetcher, itemFetcher, ensureArray } from "@/lib/swr-fetcher";
 import { useState } from "react";
 import { toast } from "sonner";
-
-const fetcher = async (url: string) => {
-  const response = await api.get(url);
-  return response.data.data || [];
-};
 
 export function useSuppliers(params?: {
   page?: number;
@@ -29,12 +25,12 @@ export function useSuppliers(params?: {
 
   const { data, error, isLoading, mutate } = useSWR(
     `/suppliers?${queryString}`,
-    fetcher,
+    arrayFetcher,
     { revalidateOnFocus: false }
   );
 
   return {
-    suppliers: data,
+    suppliers: ensureArray(data),
     isLoading,
     isError: error,
     mutate,
@@ -44,7 +40,7 @@ export function useSuppliers(params?: {
 export function useSupplier(id: string) {
   const { data, error, isLoading, mutate } = useSWR(
     id ? `/suppliers/${id}` : null,
-    fetcher, // ✅ FIXED: Gunakan fetcher yang sama
+    itemFetcher,
     { revalidateOnFocus: false }
   );
 
@@ -59,48 +55,23 @@ export function useSupplier(id: string) {
 export function useSupplierActions() {
   const [isLoading, setIsLoading] = useState(false);
 
-  const createSupplier = async (data: {
-    name: string;
-    address: string;
-    phone: string;
-    contactPerson?: string;
-    email?: string;
-    description?: string;
-  }) => {
+  const createSupplier = async (data: any) => {
     setIsLoading(true);
     try {
       const supplier = await api.post<Supplier>("/suppliers", data);
       toast.success("Supplier berhasil ditambahkan");
       return supplier;
-    } catch (error: any) {
-      toast.error(
-        error.response?.data?.message || "Gagal menambahkan supplier"
-      );
-      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateSupplier = async (
-    id: string,
-    data: {
-      name: string;
-      address: string;
-      phone: string;
-      contactPerson?: string;
-      email?: string;
-      description?: string;
-    }
-  ) => {
+  const updateSupplier = async (id: string, data: any) => {
     setIsLoading(true);
     try {
       const supplier = await api.put<Supplier>(`/suppliers/${id}`, data);
       toast.success("Supplier berhasil diupdate");
       return supplier;
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal update supplier");
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -111,9 +82,6 @@ export function useSupplierActions() {
     try {
       await api.delete(`/suppliers/${id}`);
       toast.success("Supplier berhasil dihapus");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal menghapus supplier");
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -124,9 +92,6 @@ export function useSupplierActions() {
     try {
       await api.patch(`/suppliers/${id}/toggle`);
       toast.success("Status supplier berhasil diubah");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal mengubah status");
-      throw error;
     } finally {
       setIsLoading(false);
     }

@@ -1,27 +1,15 @@
+// ============================================
 // src/hooks/useTransaction.ts
+// ============================================
 "use client";
-
 import useSWR from "swr";
 import { Transaction } from "@/types";
 import api from "@/lib/api";
+import { arrayFetcher, itemFetcher, ensureArray } from "@/lib/swr-fetcher";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const fetcher = async (url: string) => {
-  const response = await api.get(url);
-  return response.data.data || [];
-};
-
-export function useTransactions(params?: {
-  page?: number;
-  limit?: number;
-  search?: string;
-  saleType?: string;
-  status?: string;
-  memberId?: string;
-  startDate?: string;
-  endDate?: string;
-}) {
+export function useTransactions(params?: any) {
   const queryString = new URLSearchParams(
     Object.entries(params || {}).reduce((acc, [key, value]) => {
       if (value !== undefined && value !== null) {
@@ -33,12 +21,12 @@ export function useTransactions(params?: {
 
   const { data, error, isLoading, mutate } = useSWR(
     `/sales?${queryString}`,
-    fetcher,
+    arrayFetcher,
     { revalidateOnFocus: false }
   );
 
   return {
-    transactions: data,
+    transactions: ensureArray(data),
     isLoading,
     isError: error,
     mutate,
@@ -48,7 +36,7 @@ export function useTransactions(params?: {
 export function useTransaction(id: string) {
   const { data, error, isLoading, mutate } = useSWR(
     id ? `/sales/${id}` : null,
-    fetcher, // ✅ FIXED: Gunakan fetcher yang sama
+    itemFetcher,
     { revalidateOnFocus: false }
   );
 
@@ -63,25 +51,12 @@ export function useTransaction(id: string) {
 export function useTransactionActions() {
   const [isLoading, setIsLoading] = useState(false);
 
-  const createSale = async (data: {
-    memberId?: string;
-    saleType: "TUNAI" | "KREDIT";
-    items: Array<{ productId: string; quantity: number }>;
-    discountAmount?: number;
-    discountPercentage?: number;
-    dpAmount?: number;
-    paymentReceived?: number;
-    dueDate?: string;
-    notes?: string;
-  }) => {
+  const createSale = async (data: any) => {
     setIsLoading(true);
     try {
       const sale = await api.post<Transaction>("/sales", data);
       toast.success("Transaksi berhasil dibuat");
       return sale;
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal membuat transaksi");
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -101,12 +76,5 @@ export function useTransactionActions() {
     );
   };
 
-  return {
-    createSale,
-    printInvoice,
-    printThermal,
-    isLoading,
-  };
+  return { createSale, printInvoice, printThermal, isLoading };
 }
-
-export default useTransactionActions;

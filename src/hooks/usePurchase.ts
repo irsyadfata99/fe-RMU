@@ -1,32 +1,15 @@
+// ============================================
 // src/hooks/usePurchase.ts
+// ============================================
 "use client";
-
 import useSWR from "swr";
 import { useState } from "react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
+import { arrayFetcher, itemFetcher, ensureArray } from "@/lib/swr-fetcher";
 import { Purchase, PurchaseStats, CreatePurchaseRequest } from "@/types";
 
-const fetcher = async (url: string) => {
-  const response = await apiClient.get(url);
-  return response.data.data || [];
-};
-
-// ============================================
-// GET ALL PURCHASES (with filters)
-// ============================================
-export function usePurchases(params?: {
-  page?: number;
-  limit?: number;
-  search?: string;
-  purchaseType?: string;
-  status?: string;
-  supplierId?: string;
-  startDate?: string;
-  endDate?: string;
-  sortBy?: string;
-  sortOrder?: string;
-}) {
+export function usePurchases(params?: any) {
   const queryString = new URLSearchParams(
     Object.entries(params || {}).reduce((acc, [key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
@@ -38,31 +21,23 @@ export function usePurchases(params?: {
 
   const { data, error, isLoading, mutate } = useSWR(
     `/purchases?${queryString}`,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 5000,
-    }
+    arrayFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 5000 }
   );
 
   return {
-    purchases: data,
+    purchases: ensureArray(data),
     isLoading,
     isError: error,
     mutate,
   };
 }
 
-// ============================================
-// GET SINGLE PURCHASE BY ID
-// ============================================
 export function usePurchase(id: string | null) {
   const { data, error, isLoading, mutate } = useSWR(
     id ? `/purchases/${id}` : null,
-    (url) => apiClient.get<Purchase>(url),
-    {
-      revalidateOnFocus: false,
-    }
+    itemFetcher,
+    { revalidateOnFocus: false }
   );
 
   return {
@@ -73,47 +48,9 @@ export function usePurchase(id: string | null) {
   };
 }
 
-// ============================================
-// GET PURCHASE STATISTICS
-// ============================================
-export function usePurchaseStats(params?: {
-  startDate?: string;
-  endDate?: string;
-}) {
-  const queryString = new URLSearchParams(
-    Object.entries(params || {}).reduce((acc, [key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        acc[key] = String(value);
-      }
-      return acc;
-    }, {} as Record<string, string>)
-  ).toString();
-
-  const { data, error, isLoading } = useSWR(
-    `/purchases/stats?${queryString}`,
-    (url) => apiClient.get<PurchaseStats>(url),
-    {
-      revalidateOnFocus: true,
-      refreshInterval: 30000, // Refresh every 30s
-    }
-  );
-
-  return {
-    stats: data,
-    isLoading,
-    isError: error,
-  };
-}
-
-// ============================================
-// PURCHASE ACTIONS (Create, Update Payment)
-// ============================================
 export function usePurchaseActions() {
   const [isLoading, setIsLoading] = useState(false);
 
-  /**
-   * Create new purchase
-   */
   const createPurchase = async (data: CreatePurchaseRequest) => {
     setIsLoading(true);
     try {
@@ -122,21 +59,11 @@ export function usePurchaseActions() {
         description: `Invoice: ${purchase.invoiceNumber}`,
       });
       return purchase;
-    } catch (error: any) {
-      const errorMsg =
-        error.response?.data?.message || "Gagal membuat pembelian";
-      toast.error("Pembelian gagal", {
-        description: errorMsg,
-      });
-      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * Update payment for KREDIT purchase
-   */
   const updatePayment = async (
     purchaseId: string,
     data: { amount: number; notes?: string }
@@ -147,27 +74,12 @@ export function usePurchaseActions() {
         `/purchases/${purchaseId}/pay`,
         data
       );
-      toast.success("Pembayaran berhasil diupdate", {
-        description: `Sisa hutang: Rp ${purchase.remainingDebt.toLocaleString(
-          "id-ID"
-        )}`,
-      });
+      toast.success("Pembayaran berhasil diupdate");
       return purchase;
-    } catch (error: any) {
-      const errorMsg =
-        error.response?.data?.message || "Gagal update pembayaran";
-      toast.error("Update pembayaran gagal", {
-        description: errorMsg,
-      });
-      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  return {
-    createPurchase,
-    updatePayment,
-    isLoading,
-  };
+  return { createPurchase, updatePayment, isLoading };
 }

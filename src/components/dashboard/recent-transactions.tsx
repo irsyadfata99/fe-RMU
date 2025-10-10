@@ -1,6 +1,5 @@
 // src/components/dashboard/recent-transactions.tsx
 "use client";
-
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -10,8 +9,19 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+interface Transaction {
+  id: number;
+  invoiceNumber: string;
+  saleDate: string;
+  finalAmount: number;
+  saleType: "TUNAI" | "TEMPO";
+  member?: {
+    fullName: string;
+  };
+}
+
 export function RecentTransactions() {
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -21,8 +31,7 @@ export function RecentTransactions() {
 
   const fetchData = async () => {
     try {
-      // ✅ Backend uses different pagination format
-      const response = await apiClient.get<any>("/sales", {
+      const response = await apiClient.get<Transaction[]>("/sales", {
         params: {
           page: 1,
           limit: 5,
@@ -31,8 +40,23 @@ export function RecentTransactions() {
         },
       });
 
-      // ✅ Handle different response formats
-      setTransactions(Array.isArray(response) ? response : []);
+      // ✅ FIX: Properly extract array from response
+      let data = response;
+
+      // Handle nested data structure
+      if (response && typeof response === "object" && "data" in response) {
+        data = (response as any).data;
+      }
+
+      // Ensure we have an array
+      const transactionsArray = Array.isArray(data) ? data : [];
+
+      // Filter out any items without id
+      const validTransactions = transactionsArray.filter(
+        (t): t is Transaction => t && typeof t === "object" && "id" in t
+      );
+
+      setTransactions(validTransactions);
       setError(false);
     } catch (error) {
       console.error("Failed to fetch transactions:", error);
@@ -69,7 +93,7 @@ export function RecentTransactions() {
     );
   }
 
-  if (!transactions || transactions.length === 0) {
+  if (transactions.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center">
         <p className="text-sm text-muted-foreground">Belum ada transaksi</p>
@@ -80,9 +104,9 @@ export function RecentTransactions() {
   return (
     <div className="space-y-4">
       <div className="space-y-3">
-        {transactions.map((transaction) => (
+        {transactions.map((transaction, index) => (
           <div
-            key={transaction.id}
+            key={transaction.id || `transaction-${index}`}
             className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent"
           >
             <div className="space-y-1">

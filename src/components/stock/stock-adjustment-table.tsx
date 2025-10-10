@@ -1,8 +1,10 @@
+// ============================================
 // src/components/stock/stock-adjustment-table.tsx
+// ============================================
 "use client";
-
 import { StockAdjustmentRecord } from "@/types";
 import { formatDateTime } from "@/lib/utils";
+import { ensureArray } from "@/lib/swr-fetcher";
 import {
   Table,
   TableBody,
@@ -17,7 +19,7 @@ import { Eye, CheckCircle, XCircle } from "lucide-react";
 import { ADJUSTMENT_TYPE_LABELS } from "@/lib/validations";
 
 interface StockAdjustmentTableProps {
-  adjustments: StockAdjustmentRecord[];
+  adjustments: StockAdjustmentRecord[] | undefined | null;
   onView?: (adjustment: StockAdjustmentRecord) => void;
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
@@ -31,37 +33,15 @@ export function StockAdjustmentTable({
   onReject,
   userRole,
 }: StockAdjustmentTableProps) {
-  if (adjustments.length === 0) {
+  const safeAdjustments = ensureArray(adjustments);
+
+  if (safeAdjustments.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
         <p className="text-muted-foreground">Tidak ada adjustment ditemukan</p>
       </div>
     );
   }
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      APPROVED: "default",
-      PENDING: "secondary",
-      REJECTED: "destructive",
-    };
-    const labels: Record<string, string> = {
-      APPROVED: "Disetujui",
-      PENDING: "Menunggu",
-      REJECTED: "Ditolak",
-    };
-    return (
-      <Badge variant={variants[status] || "outline"}>
-        {labels[status] || status}
-      </Badge>
-    );
-  };
-
-  const getTypeBadge = (type: string) => {
-    return (
-      <Badge variant="outline">{ADJUSTMENT_TYPE_LABELS[type] || type}</Badge>
-    );
-  };
 
   return (
     <div className="rounded-lg border">
@@ -73,14 +53,12 @@ export function StockAdjustmentTable({
             <TableHead>Produk</TableHead>
             <TableHead>Jenis</TableHead>
             <TableHead className="text-center">Jumlah</TableHead>
-            <TableHead>Alasan</TableHead>
-            <TableHead>User</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Aksi</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {adjustments.map((adjustment) => (
+          {safeAdjustments.map((adjustment) => (
             <TableRow key={adjustment.id}>
               <TableCell className="font-mono text-sm">
                 {adjustment.adjustmentNumber}
@@ -94,12 +72,13 @@ export function StockAdjustmentTable({
                   <p className="text-xs text-muted-foreground">
                     SKU: {adjustment.product?.sku}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Stok: {adjustment.product?.stock} {adjustment.product?.unit}
-                  </p>
                 </div>
               </TableCell>
-              <TableCell>{getTypeBadge(adjustment.adjustmentType)}</TableCell>
+              <TableCell>
+                <Badge variant="outline">
+                  {ADJUSTMENT_TYPE_LABELS[adjustment.adjustmentType]}
+                </Badge>
+              </TableCell>
               <TableCell className="text-center">
                 <span
                   className={`font-semibold ${
@@ -110,11 +89,23 @@ export function StockAdjustmentTable({
                   {adjustment.quantity}
                 </span>
               </TableCell>
-              <TableCell className="max-w-xs truncate text-sm">
-                {adjustment.reason}
+              <TableCell>
+                <Badge
+                  variant={
+                    adjustment.status === "APPROVED"
+                      ? "default"
+                      : adjustment.status === "PENDING"
+                      ? "secondary"
+                      : "destructive"
+                  }
+                >
+                  {adjustment.status === "APPROVED"
+                    ? "Disetujui"
+                    : adjustment.status === "PENDING"
+                    ? "Menunggu"
+                    : "Ditolak"}
+                </Badge>
               </TableCell>
-              <TableCell className="text-sm">{adjustment.user?.name}</TableCell>
-              <TableCell>{getStatusBadge(adjustment.status)}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                   {onView && (
@@ -133,7 +124,6 @@ export function StockAdjustmentTable({
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => onApprove(adjustment.id)}
-                          title="Setujui"
                         >
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         </Button>
@@ -143,7 +133,6 @@ export function StockAdjustmentTable({
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => onReject(adjustment.id)}
-                          title="Tolak"
                         >
                           <XCircle className="h-4 w-4 text-red-600" />
                         </Button>
@@ -159,5 +148,3 @@ export function StockAdjustmentTable({
     </div>
   );
 }
-
-export default StockAdjustmentTable;

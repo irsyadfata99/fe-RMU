@@ -1,7 +1,9 @@
+// ============================================
 // src/components/transactions/transaction-table.tsx
+// ============================================
 "use client";
-
 import { Transaction } from "@/types";
+import { ensureArray } from "@/lib/swr-fetcher";
 import {
   Table,
   TableBody,
@@ -17,15 +19,15 @@ import { Printer } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface TransactionTableProps {
-  transactions: Transaction[];
+  transactions: Transaction[] | undefined | null;
 }
 
 export function TransactionTable({ transactions }: TransactionTableProps) {
   const router = useRouter();
+  const safeTransactions = ensureArray(transactions);
 
-  // ✅ Button "Cetak Invoice" redirects to detail page
   const handlePrintClick = (transactionId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click
+    e.stopPropagation();
     router.push(`/dashboard/transaksi/penjualan/${transactionId}`);
   };
 
@@ -33,24 +35,7 @@ export function TransactionTable({ transactions }: TransactionTableProps) {
     router.push(`/dashboard/transaksi/penjualan/${transactionId}`);
   };
 
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "PAID":
-        return "default";
-      case "PARTIAL":
-        return "secondary";
-      case "PENDING":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
-
-  const getSaleTypeVariant = (saleType: string) => {
-    return saleType === "TUNAI" ? "default" : "secondary";
-  };
-
-  if (transactions.length === 0) {
+  if (safeTransactions.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center rounded-lg border">
         <p className="text-muted-foreground">Tidak ada transaksi ditemukan</p>
@@ -73,7 +58,7 @@ export function TransactionTable({ transactions }: TransactionTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {transactions.map((transaction) => (
+          {safeTransactions.map((transaction) => (
             <TableRow
               key={transaction.id}
               className="cursor-pointer hover:bg-muted/50"
@@ -96,7 +81,11 @@ export function TransactionTable({ transactions }: TransactionTableProps) {
                 </div>
               </TableCell>
               <TableCell>
-                <Badge variant={getSaleTypeVariant(transaction.saleType)}>
+                <Badge
+                  variant={
+                    transaction.saleType === "TUNAI" ? "default" : "secondary"
+                  }
+                >
                   {transaction.saleType}
                 </Badge>
               </TableCell>
@@ -104,12 +93,15 @@ export function TransactionTable({ transactions }: TransactionTableProps) {
                 {formatCurrency(transaction.finalAmount)}
               </TableCell>
               <TableCell>
-                <Badge variant={getStatusVariant(transaction.status)}>
+                <Badge
+                  variant={
+                    transaction.status === "PAID" ? "default" : "secondary"
+                  }
+                >
                   {transaction.status}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
-                {/* ✅ Redirect to detail page */}
                 <Button
                   variant="outline"
                   size="sm"

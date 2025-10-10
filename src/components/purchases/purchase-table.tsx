@@ -1,8 +1,10 @@
+// ============================================
 // src/components/purchases/purchase-table.tsx
+// ============================================
 "use client";
-
 import { Purchase } from "@/types";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { ensureArray } from "@/lib/swr-fetcher";
 import {
   Table,
   TableBody,
@@ -21,7 +23,7 @@ import {
 } from "@/lib/validations";
 
 interface PurchaseTableProps {
-  purchases: Purchase[];
+  purchases: Purchase[] | undefined | null;
   onPayment?: (purchase: Purchase) => void;
   userRole: string;
 }
@@ -31,7 +33,9 @@ export function PurchaseTable({
   onPayment,
   userRole,
 }: PurchaseTableProps) {
-  if (purchases.length === 0) {
+  const safePurchases = ensureArray(purchases);
+
+  if (safePurchases.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
         <p className="text-muted-foreground">Tidak ada pembelian ditemukan</p>
@@ -83,7 +87,7 @@ export function PurchaseTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {purchases.map((purchase) => (
+          {safePurchases.map((purchase) => (
             <TableRow key={purchase.id}>
               <TableCell className="font-mono text-sm font-medium">
                 {purchase.invoiceNumber}
@@ -132,7 +136,6 @@ export function PurchaseTable({
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => onPayment(purchase)}
-                        title="Bayar Hutang"
                       >
                         <CreditCard className="h-4 w-4 text-orange-600" />
                       </Button>

@@ -1,6 +1,5 @@
 // src/components/products/product-form.tsx
 "use client";
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -20,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Product, ProductType } from "@/types";
 import useSWR from "swr";
-import { apiClient } from "@/lib/api";
+import { arrayFetcher, ensureArray } from "@/lib/swr-fetcher";
 import {
   Select,
   SelectContent,
@@ -28,17 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Define interfaces for API responses
-interface Category {
-  id: string;
-  name: string;
-}
-
-interface Supplier {
-  id: string;
-  name: string;
-}
 
 interface ProductFormProps {
   initialData?: Product;
@@ -51,12 +39,12 @@ export function ProductForm({
   onSubmit,
   isLoading,
 }: ProductFormProps) {
-  const { data: categories } = useSWR("/categories", (url) =>
-    apiClient.get<Category[]>(url)
-  );
-  const { data: suppliers } = useSWR("/suppliers", (url) =>
-    apiClient.get<Supplier[]>(url)
-  );
+  // ✅ FIX: Use arrayFetcher dan ensureArray
+  const { data: categoriesData } = useSWR("/categories", arrayFetcher);
+  const { data: suppliersData } = useSWR("/suppliers", arrayFetcher);
+
+  const categories = ensureArray(categoriesData);
+  const suppliers = ensureArray(suppliersData);
 
   const form = useForm<ProductFormType>({
     resolver: zodResolver(productSchema),
@@ -102,7 +90,7 @@ export function ProductForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Kolom Kiri */}
+          {/* LEFT COLUMN */}
           <div className="space-y-4">
             <h3 className="font-semibold">Informasi Dasar</h3>
 
@@ -136,11 +124,17 @@ export function ProductForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {categories?.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
+                      {categories.length === 0 ? (
+                        <SelectItem value="none" disabled>
+                          Tidak ada kategori
                         </SelectItem>
-                      ))}
+                      ) : (
+                        categories.map((cat: any) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -281,7 +275,7 @@ export function ProductForm({
             </div>
           </div>
 
-          {/* Kolom Kanan */}
+          {/* RIGHT COLUMN */}
           <div className="space-y-4">
             <h3 className="font-semibold">Informasi Supplier & Point</h3>
 
@@ -301,11 +295,17 @@ export function ProductForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {suppliers?.map((sup) => (
-                        <SelectItem key={sup.id} value={sup.id}>
-                          {sup.name}
+                      {suppliers.length === 0 ? (
+                        <SelectItem value="none" disabled>
+                          Tidak ada supplier
                         </SelectItem>
-                      ))}
+                      ) : (
+                        suppliers.map((sup: any) => (
+                          <SelectItem key={sup.id} value={sup.id}>
+                            {sup.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />

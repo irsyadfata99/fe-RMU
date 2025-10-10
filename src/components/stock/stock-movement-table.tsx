@@ -1,9 +1,10 @@
+// ============================================
 // src/components/stock/stock-movement-table.tsx
+// ============================================
 "use client";
-
-import React from "react";
 import { StockMovementRecord } from "@/types";
 import { formatDateTime } from "@/lib/utils";
+import { ensureArray } from "@/lib/swr-fetcher";
 import {
   Table,
   TableBody,
@@ -17,11 +18,13 @@ import { STOCK_MOVEMENT_TYPE_LABELS } from "@/lib/validations";
 import { ArrowUp, ArrowDown, RefreshCw, Undo2 } from "lucide-react";
 
 interface StockMovementTableProps {
-  movements: StockMovementRecord[];
+  movements: StockMovementRecord[] | undefined | null;
 }
 
 export function StockMovementTable({ movements }: StockMovementTableProps) {
-  if (movements.length === 0) {
+  const safeMovements = ensureArray(movements);
+
+  if (safeMovements.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
         <p className="text-muted-foreground">
@@ -31,7 +34,7 @@ export function StockMovementTable({ movements }: StockMovementTableProps) {
     );
   }
 
-  const getMovementIcon = (type: string): React.ReactElement | null => {
+  const getMovementIcon = (type: string) => {
     const icons: Record<string, React.ReactElement> = {
       IN: <ArrowUp className="h-4 w-4 text-green-600" />,
       OUT: <ArrowDown className="h-4 w-4 text-red-600" />,
@@ -40,40 +43,6 @@ export function StockMovementTable({ movements }: StockMovementTableProps) {
       RETURN_OUT: <Undo2 className="h-4 w-4 text-red-600" />,
     };
     return icons[type] || null;
-  };
-
-  const getMovementBadge = (type: string) => {
-    const variants: Record<
-      string,
-      "default" | "secondary" | "destructive" | "outline"
-    > = {
-      IN: "default",
-      OUT: "destructive",
-      ADJUSTMENT: "secondary",
-      RETURN_IN: "default",
-      RETURN_OUT: "destructive",
-    };
-    return (
-      <Badge variant={variants[type] || "outline"} className="gap-1">
-        {getMovementIcon(type)}
-        {STOCK_MOVEMENT_TYPE_LABELS[type] || type}
-      </Badge>
-    );
-  };
-
-  const getReferenceTypeBadge = (type?: string) => {
-    if (!type) return "-";
-    const labels: Record<string, string> = {
-      PURCHASE: "Pembelian",
-      SALE: "Penjualan",
-      ADJUSTMENT: "Penyesuaian",
-      RETURN: "Retur",
-    };
-    return (
-      <Badge variant="outline" className="text-xs">
-        {labels[type] || type}
-      </Badge>
-    );
   };
 
   return (
@@ -87,13 +56,11 @@ export function StockMovementTable({ movements }: StockMovementTableProps) {
             <TableHead className="text-center">Stok Sebelum</TableHead>
             <TableHead className="text-center">Perubahan</TableHead>
             <TableHead className="text-center">Stok Sesudah</TableHead>
-            <TableHead>Referensi</TableHead>
-            <TableHead>User</TableHead>
             <TableHead>Catatan</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {movements.map((movement) => (
+          {safeMovements.map((movement) => (
             <TableRow key={movement.id}>
               <TableCell className="text-sm">
                 {formatDateTime(movement.createdAt)}
@@ -106,7 +73,12 @@ export function StockMovementTable({ movements }: StockMovementTableProps) {
                   </p>
                 </div>
               </TableCell>
-              <TableCell>{getMovementBadge(movement.type)}</TableCell>
+              <TableCell>
+                <Badge variant="outline" className="gap-1">
+                  {getMovementIcon(movement.type)}
+                  {STOCK_MOVEMENT_TYPE_LABELS[movement.type] || movement.type}
+                </Badge>
+              </TableCell>
               <TableCell className="text-center font-mono">
                 {movement.quantityBefore}
               </TableCell>
@@ -122,12 +94,6 @@ export function StockMovementTable({ movements }: StockMovementTableProps) {
               </TableCell>
               <TableCell className="text-center font-mono font-semibold">
                 {movement.quantityAfter}
-              </TableCell>
-              <TableCell>
-                {getReferenceTypeBadge(movement.referenceType)}
-              </TableCell>
-              <TableCell className="text-sm">
-                {movement.user?.name || "-"}
               </TableCell>
               <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                 {movement.notes || "-"}

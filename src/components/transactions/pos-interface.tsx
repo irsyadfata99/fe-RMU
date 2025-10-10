@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useProductActions } from "@/hooks/useProduct";
 import { useTransactionActions } from "@/hooks/useTransaction";
 import { CartItem } from "./cart-item";
@@ -15,10 +15,11 @@ import { Product } from "@/types";
 import { apiClient } from "@/lib/api";
 
 interface CartItemType {
+  cartId: string;
   product: Product;
   quantity: number;
   subtotal: number;
-  priceUsed: number; // ✅ Track which price is being used
+  priceUsed: number;
 }
 
 interface Member {
@@ -26,6 +27,24 @@ interface Member {
   uniqueId: string;
   fullName: string;
   regionName: string;
+}
+
+// ✅ Removed unused Transaction interface
+
+interface PaymentData {
+  saleType: "TUNAI" | "TEMPO";
+  paymentReceived: number;
+  dpAmount?: number;
+  dueDate?: string;
+  notes?: string;
+}
+
+// ✅ Add proper API response interfaces
+interface SaleResponse {
+  id: string;
+  invoiceNumber: string;
+  saleType: string;
+  finalAmount: number;
 }
 
 export function POSInterface() {
@@ -51,12 +70,36 @@ export function POSInterface() {
     if (input) input.focus();
   }, []);
 
-  // ✅ Auto-update prices when member changes
+  // ✅ Get correct price based on member status
+  const getPrice = useCallback(
+    (product: Product): number => {
+      return memberId
+        ? product.sellingPriceMember
+        : product.sellingPriceGeneral;
+    },
+    [memberId]
+  );
+
+  // ✅ Update all cart prices when member changes
+  const updateAllPrices = useCallback(() => {
+    setCart((prevCart) =>
+      prevCart.map((item) => {
+        const newPrice = getPrice(item.product);
+        return {
+          ...item,
+          priceUsed: newPrice,
+          subtotal: newPrice * item.quantity,
+        };
+      })
+    );
+  }, [getPrice]);
+
+  // Auto-update prices when member changes
   useEffect(() => {
     if (cart.length > 0) {
       updateAllPrices();
     }
-  }, [memberId]);
+  }, [memberId, cart.length, updateAllPrices]);
 
   // Debounced member search
   useEffect(() => {
@@ -105,32 +148,12 @@ export function POSInterface() {
     }
   };
 
-  // ✅ Get correct price based on member status
-  const getPrice = (product: Product): number => {
-    return memberId ? product.sellingPriceMember : product.sellingPriceGeneral;
-  };
-
-  // ✅ Update all cart prices when member changes
-  const updateAllPrices = () => {
-    setCart((prevCart) =>
-      prevCart.map((item) => {
-        const newPrice = getPrice(item.product);
-        return {
-          ...item,
-          priceUsed: newPrice,
-          subtotal: newPrice * item.quantity,
-        };
-      })
-    );
-  };
-
   const handleMemberSelect = (member: Member) => {
     setMemberId(member.id);
     setMemberDisplay(`${member.uniqueId} - ${member.fullName}`);
     setMemberSearch("");
     setShowSuggestions(false);
 
-    // Show toast notification
     toast.success(
       `Member ${member.fullName} dipilih - Harga berubah ke harga member`
     );
@@ -151,36 +174,77 @@ export function POSInterface() {
   const handleMemberInputChange = (value: string) => {
     setMemberSearch(value);
     if (memberId) {
-      // Clear selection when user starts typing again
       setMemberId("");
       setMemberDisplay("");
     }
   };
 
+  // ✅ Fix handleBarcodeSubmit - handle response properly
   const handleBarcodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!barcode.trim()) return;
 
     try {
-      const product = await searchByBarcode(barcode);
+      // searchByBarcode returns the full axios response
+      const response = await searchByBarcode(barcode);
+
+      // Extract product from response
+      // Handle multiple possible response structures
+      let product: Product | null = null;
+
+      // Case 1: response.data.data (nested structure)
+      if (response?.data?.data) {
+        product = response.data.data;
+      }
+      // Case 2: response.data (direct data)
+      else if (response?.data) {
+        product = response.data;
+      }
+      // Case 3: response itself is the product (unlikely but safe)
+      else if (response && typeof response === "object" && "id" in response) {
+        product = response as unknown as Product;
+      }
+
+      if (!product || !product.id) {
+        throw new Error("Data produk tidak valid");
+      }
+
       addToCart(product);
       setBarcode("");
       toast.success(`${product.name} ditambahkan ke keranjang`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Produk tidak ditemukan");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Produk tidak ditemukan";
+      toast.error(message);
     }
   };
 
   const addToCart = (product: Product) => {
+    // Validate product data
+    if (!product || !product.id) {
+      toast.error("Data produk tidak valid");
+      return;
+    }
+
     const price = getPrice(product);
+
+    // Validate price
+    if (isNaN(price) || price <= 0) {
+      toast.error("Harga produk tidak valid");
+      console.error("Invalid price data:", { product, price });
+      return;
+    }
+
     const existingItem = cart.find((item) => item.product.id === product.id);
 
     if (existingItem) {
-      updateQuantity(product.id, existingItem.quantity + 1);
+      updateQuantity(existingItem.cartId, existingItem.quantity + 1);
     } else {
+      const cartId = `${product.id}-${Date.now()}`;
       setCart([
         ...cart,
         {
+          cartId,
           product,
           quantity: 1,
           priceUsed: price,
@@ -190,14 +254,14 @@ export function POSInterface() {
     }
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (cartId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(cartId);
       return;
     }
     setCart(
       cart.map((item) =>
-        item.product.id === productId
+        item.cartId === cartId
           ? {
               ...item,
               quantity,
@@ -208,8 +272,8 @@ export function POSInterface() {
     );
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart(cart.filter((item) => item.product.id !== productId));
+  const removeFromCart = (cartId: string) => {
+    setCart(cart.filter((item) => item.cartId !== cartId));
     toast.success("Item dihapus dari keranjang");
   };
 
@@ -233,7 +297,8 @@ export function POSInterface() {
     setIsPaymentModalOpen(true);
   };
 
-  const handlePaymentComplete = async (paymentData: any) => {
+  // ✅ Fix handlePaymentComplete - handle response properly
+  const handlePaymentComplete = async (paymentData: PaymentData) => {
     try {
       const saleData = {
         memberId: memberId || undefined,
@@ -249,7 +314,28 @@ export function POSInterface() {
         notes: paymentData.notes,
       };
 
-      const sale = await createSale(saleData);
+      // createSale returns the full axios response
+      const response = await createSale(saleData);
+
+      // Extract sale from response
+      // Handle multiple possible response structures
+      let sale: SaleResponse | null = null;
+
+      // Case 1: response.data.data (nested structure)
+      if (response?.data?.data) {
+        sale = response.data.data;
+      }
+      // Case 2: response.data (direct data)
+      else if (response?.data) {
+        sale = response.data;
+      }
+      // Case 3: response itself is the sale (unlikely but safe)
+      else if (response && typeof response === "object" && "id" in response) {
+        sale = response as unknown as SaleResponse;
+      }
+
+      console.log("Sale response:", response);
+      console.log("Sale data:", sale);
 
       if (!sale || !sale.id) {
         throw new Error("Sale ID tidak ditemukan dalam response");
@@ -275,11 +361,11 @@ export function POSInterface() {
       handleClearMember();
 
       toast.success(`Transaksi ${sale.invoiceNumber} berhasil!`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Error creating sale:", error);
-      toast.error(
-        "Transaksi gagal: " + (error.response?.data?.message || error.message)
-      );
+      const message =
+        error instanceof Error ? error.message : "Terjadi kesalahan";
+      toast.error("Transaksi gagal: " + message);
     }
   };
 
@@ -334,7 +420,6 @@ export function POSInterface() {
         <div className="space-y-2 relative">
           <Label>Member (Opsional)</Label>
           {memberId ? (
-            // Display selected member
             <div className="flex items-center gap-2">
               <Input value={memberDisplay} disabled className="flex-1" />
               <Button variant="ghost" size="icon" onClick={handleClearMember}>
@@ -342,7 +427,6 @@ export function POSInterface() {
               </Button>
             </div>
           ) : (
-            // Search input
             <>
               <div className="relative">
                 <Input
@@ -367,7 +451,6 @@ export function POSInterface() {
                 )}
               </div>
 
-              {/* Suggestions Dropdown */}
               {showSuggestions && memberSearch.length >= 3 && (
                 <div
                   ref={suggestionsRef}
@@ -445,10 +528,12 @@ export function POSInterface() {
               <div className="divide-y">
                 {cart.map((item) => (
                   <CartItem
-                    key={item.product.id}
+                    key={item.cartId}
                     item={item}
-                    onUpdateQuantity={updateQuantity}
-                    onRemove={removeFromCart}
+                    onUpdateQuantity={(productId, quantity) =>
+                      updateQuantity(item.cartId, quantity)
+                    }
+                    onRemove={() => removeFromCart(item.cartId)}
                   />
                 ))}
               </div>

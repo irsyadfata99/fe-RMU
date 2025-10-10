@@ -1,8 +1,10 @@
+// ============================================
 // src/components/dashboard/revenue-chart.tsx
+// ============================================
 "use client";
-
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api";
+import { ensureArray } from "@/lib/swr-fetcher";
 import { formatCurrency } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 
@@ -21,7 +23,6 @@ export function RevenueChart() {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 7);
 
-      // ✅ Add proper error handling
       const response = await apiClient.get<any>("/reports/daily-transactions", {
         params: {
           startDate: startDate.toISOString().split("T")[0],
@@ -29,12 +30,13 @@ export function RevenueChart() {
         },
       });
 
-      setData(Array.isArray(response) ? response : []);
+      // ✅ FIX: Always ensure array
+      setData(ensureArray(response));
       setError(false);
     } catch (error) {
       console.error("Failed to fetch revenue data:", error);
       setError(true);
-      setData([]); // Set empty array on error
+      setData([]);
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +68,7 @@ export function RevenueChart() {
     );
   }
 
-  if (!data || data.length === 0) {
+  if (data.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center">
         <p className="text-sm text-muted-foreground">

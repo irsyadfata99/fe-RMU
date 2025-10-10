@@ -1,8 +1,10 @@
+// ============================================
 // src/components/products/product-table.tsx
+// ============================================
 "use client";
-
 import { Product } from "@/types";
 import { formatCurrency } from "@/lib/utils";
+import { ensureArray } from "@/lib/swr-fetcher";
 import { StockBadge } from "./stock-badge";
 import {
   Table,
@@ -18,7 +20,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 
 interface ProductTableProps {
-  products: Product[];
+  products: Product[] | undefined | null;
   onDelete: (id: string) => void;
   userRole: string;
 }
@@ -28,7 +30,9 @@ export function ProductTable({
   onDelete,
   userRole,
 }: ProductTableProps) {
-  if (products.length === 0) {
+  const safeProducts = ensureArray(products);
+
+  if (safeProducts.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
         <p className="text-muted-foreground">Tidak ada produk ditemukan</p>
@@ -52,7 +56,7 @@ export function ProductTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {products.map((product) => (
+          {safeProducts.map((product) => (
             <TableRow key={product.id}>
               <TableCell className="font-mono text-xs">{product.sku}</TableCell>
               <TableCell className="font-mono text-xs">

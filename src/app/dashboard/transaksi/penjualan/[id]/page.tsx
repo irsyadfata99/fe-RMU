@@ -1,33 +1,77 @@
 // src/app/dashboard/transaksi/penjualan/[id]/page.tsx
 "use client";
 
+import { use } from "react";
 import { useTransaction } from "@/hooks/useTransaction";
 import { InvoicePreview } from "@/components/transactions/invoice-preview";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function TransactionDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const { transaction, isLoading } = useTransaction(params.id);
+  const { id } = use(params);
+  const { transaction, isLoading } = useTransaction(id);
 
-  const handlePrint = () => {
+  // ✅ FIXED: Print invoice langsung dengan fetch HTML lalu print
+  const handlePrintInvoice = async () => {
     if (!transaction) return;
 
-    if (transaction.saleType === "TUNAI") {
-      window.open(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/sales/${transaction.id}/print/thermal`,
-        "_blank"
-      );
-    } else {
-      window.open(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/sales/${transaction.id}/print/invoice`,
-        "_blank"
-      );
+    try {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
+
+      // Tentukan endpoint print berdasarkan jenis transaksi
+      const printEndpoint =
+        transaction.saleType === "KREDIT"
+          ? "print/invoice" // Dot matrix untuk KREDIT
+          : "print/thermal"; // Thermal untuk TUNAI
+
+      const printUrl = `${baseUrl}/sales/${transaction.id}/${printEndpoint}`;
+
+      toast.loading("Memuat invoice...");
+
+      // ✅ Fetch HTML dari backend
+      const response = await fetch(printUrl);
+
+      if (!response.ok) {
+        throw new Error("Gagal memuat invoice");
+      }
+
+      const html = await response.text();
+
+      // ✅ Buat window baru dan tulis HTML
+      const printWindow = window.open("", "_blank");
+
+      if (!printWindow) {
+        toast.error(
+          "Pop-up diblokir! Silakan izinkan pop-up untuk browser ini."
+        );
+        // Fallback: buka di tab baru
+        window.open(printUrl, "_blank");
+        return;
+      }
+
+      printWindow.document.write(html);
+      printWindow.document.close();
+
+      toast.dismiss();
+      toast.success("Invoice siap dicetak");
+    } catch (error) {
+      console.error("Print error:", error);
+      toast.dismiss();
+      toast.error("Gagal memuat invoice");
     }
   };
 
@@ -41,8 +85,16 @@ export default function TransactionDetailPage({
 
   if (!transaction) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <p className="text-muted-foreground">Transaksi tidak ditemukan</p>
+      <div className="flex h-96 flex-col items-center justify-center gap-4">
+        <p className="text-lg text-muted-foreground">
+          Transaksi tidak ditemukan
+        </p>
+        <Link href="/dashboard/transaksi/penjualan">
+          <Button variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Kembali ke Riwayat
+          </Button>
+        </Link>
       </div>
     );
   }
@@ -62,9 +114,11 @@ export default function TransactionDetailPage({
             <p className="text-muted-foreground">{transaction.invoiceNumber}</p>
           </div>
         </div>
-        <Button onClick={handlePrint}>
+
+        {/* ✅ Print menggunakan dot matrix format */}
+        <Button onClick={handlePrintInvoice} size="lg">
           <Printer className="mr-2 h-4 w-4" />
-          Cetak {transaction.saleType === "TUNAI" ? "Struk" : "Invoice"}
+          Cetak Invoice
         </Button>
       </div>
 

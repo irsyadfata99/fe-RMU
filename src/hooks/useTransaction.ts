@@ -3,11 +3,14 @@
 
 import useSWR from "swr";
 import { Transaction } from "@/types";
-import { apiClient } from "@/lib/api";
+import api from "@/lib/api";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const fetcher = (url: string) => apiClient.get<any>(url);
+const fetcher = async (url: string) => {
+  const response = await api.get(url);
+  return response.data.data || [];
+};
 
 export function useTransactions(params?: {
   page?: number;
@@ -45,7 +48,7 @@ export function useTransactions(params?: {
 export function useTransaction(id: string) {
   const { data, error, isLoading, mutate } = useSWR(
     id ? `/sales/${id}` : null,
-    (url) => apiClient.get<Transaction>(url),
+    fetcher, // ✅ FIXED: Gunakan fetcher yang sama
     { revalidateOnFocus: false }
   );
 
@@ -73,7 +76,7 @@ export function useTransactionActions() {
   }) => {
     setIsLoading(true);
     try {
-      const sale = await apiClient.post<Transaction>("/sales", data);
+      const sale = await api.post<Transaction>("/sales", data);
       toast.success("Transaksi berhasil dibuat");
       return sale;
     } catch (error: any) {
@@ -105,3 +108,5 @@ export function useTransactionActions() {
     isLoading,
   };
 }
+
+export default useTransactionActions;

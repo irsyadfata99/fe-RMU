@@ -3,13 +3,22 @@
 
 import useSWR from "swr";
 import { Member } from "@/types";
-import { apiClient } from "@/lib/api";
+import api from "@/lib/api";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const fetcher = (url: string) => apiClient.get<Member[]>(url);
+const fetcher = async (url: string) => {
+  const response = await api.get(url);
+  return response.data.data || [];
+};
 
-export function useMembers(params?: { page?: number; limit?: number; search?: string; regionCode?: string; isActive?: boolean }) {
+export function useMembers(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  regionCode?: string;
+  isActive?: boolean;
+}) {
   const queryString = new URLSearchParams(
     Object.entries(params || {}).reduce((acc, [key, value]) => {
       if (value !== undefined && value !== null) {
@@ -19,7 +28,11 @@ export function useMembers(params?: { page?: number; limit?: number; search?: st
     }, {} as Record<string, string>)
   ).toString();
 
-  const { data, error, isLoading, mutate } = useSWR(`/members?${queryString}`, fetcher, { revalidateOnFocus: false });
+  const { data, error, isLoading, mutate } = useSWR(
+    `/members?${queryString}`,
+    fetcher,
+    { revalidateOnFocus: false }
+  );
 
   return {
     members: data,
@@ -30,7 +43,11 @@ export function useMembers(params?: { page?: number; limit?: number; search?: st
 }
 
 export function useMember(id: string) {
-  const { data, error, isLoading, mutate } = useSWR(id ? `/members/${id}` : null, (url) => apiClient.get<Member>(url), { revalidateOnFocus: false });
+  const { data, error, isLoading, mutate } = useSWR(
+    id ? `/members/${id}` : null,
+    fetcher, // ✅ FIXED: Gunakan fetcher yang sama
+    { revalidateOnFocus: false }
+  );
 
   return {
     member: data,
@@ -41,7 +58,11 @@ export function useMember(id: string) {
 }
 
 export function useMemberStats() {
-  const { data, error, isLoading } = useSWR("/members/stats", (url) => apiClient.get<any>(url), { revalidateOnFocus: false });
+  const { data, error, isLoading } = useSWR(
+    "/members/stats",
+    fetcher, // ✅ FIXED: Gunakan fetcher yang sama
+    { revalidateOnFocus: false }
+  );
 
   return {
     stats: data,
@@ -65,7 +86,7 @@ export function useMemberActions() {
   ) => {
     setIsLoading(true);
     try {
-      const member = await apiClient.put<Member>(`/members/${id}`, data);
+      const member = await api.put<Member>(`/members/${id}`, data);
       toast.success("Data member berhasil diupdate");
       return member;
     } catch (error: any) {
@@ -79,7 +100,7 @@ export function useMemberActions() {
   const toggleActive = async (id: string) => {
     setIsLoading(true);
     try {
-      await apiClient.patch(`/members/${id}/toggle`);
+      await api.patch(`/members/${id}/toggle`);
       toast.success("Status member berhasil diubah");
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Gagal mengubah status");
@@ -92,7 +113,7 @@ export function useMemberActions() {
   const deleteMember = async (id: string) => {
     setIsLoading(true);
     try {
-      await apiClient.delete(`/members/${id}`);
+      await api.delete(`/members/${id}`);
       toast.success("Member berhasil dihapus");
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Gagal menghapus member");

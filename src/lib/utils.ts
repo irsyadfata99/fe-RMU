@@ -21,7 +21,10 @@ export function formatNumber(num: number): string {
   return new Intl.NumberFormat("id-ID").format(num);
 }
 
-export function formatDate(date: string | Date, formatStr: string = "dd/MM/yyyy"): string {
+export function formatDate(
+  date: string | Date,
+  formatStr: string = "dd/MM/yyyy"
+): string {
   try {
     const dateObj = typeof date === "string" ? parseISO(date) : date;
     return format(dateObj, formatStr);
@@ -42,7 +45,10 @@ export function truncate(text: string, length: number): string {
 }
 
 // Generate unique ID for member
-export function generateMemberUniqueId(regionCode: string, number: number): string {
+export function generateMemberUniqueId(
+  regionCode: string,
+  number: number
+): string {
   const paddedNumber = number.toString().padStart(3, "0");
   return `${regionCode}-${paddedNumber}`;
 }
@@ -64,7 +70,10 @@ export function calculatePercentage(value: number, total: number): number {
 }
 
 // Debounce function
-export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout;
 
   return function executedFunction(...args: Parameters<T>) {

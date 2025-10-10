@@ -12,6 +12,11 @@ import {
   StockStats,
 } from "@/types";
 
+const fetcher = async (url: string) => {
+  const response = await apiClient.get(url);
+  return response.data.data || [];
+};
+
 // ============================================
 // STOCK STATISTICS
 // ============================================

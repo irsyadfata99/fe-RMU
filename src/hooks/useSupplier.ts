@@ -3,11 +3,14 @@
 
 import useSWR from "swr";
 import { Supplier } from "@/types";
-import { apiClient } from "@/lib/api";
+import api from "@/lib/api";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const fetcher = (url: string) => apiClient.get<Supplier[]>(url);
+const fetcher = async (url: string) => {
+  const response = await api.get(url);
+  return response.data.data || [];
+};
 
 export function useSuppliers(params?: {
   page?: number;
@@ -41,7 +44,7 @@ export function useSuppliers(params?: {
 export function useSupplier(id: string) {
   const { data, error, isLoading, mutate } = useSWR(
     id ? `/suppliers/${id}` : null,
-    (url) => apiClient.get<Supplier>(url),
+    fetcher, // ✅ FIXED: Gunakan fetcher yang sama
     { revalidateOnFocus: false }
   );
 
@@ -66,7 +69,7 @@ export function useSupplierActions() {
   }) => {
     setIsLoading(true);
     try {
-      const supplier = await apiClient.post<Supplier>("/suppliers", data);
+      const supplier = await api.post<Supplier>("/suppliers", data);
       toast.success("Supplier berhasil ditambahkan");
       return supplier;
     } catch (error: any) {
@@ -85,14 +88,14 @@ export function useSupplierActions() {
       name: string;
       address: string;
       phone: string;
-      contactPerson?: string; // ⬅️ Tambah ini
+      contactPerson?: string;
       email?: string;
-      description?: string; // ⬅️ Tambah ini
+      description?: string;
     }
   ) => {
     setIsLoading(true);
     try {
-      const supplier = await apiClient.put<Supplier>(`/suppliers/${id}`, data);
+      const supplier = await api.put<Supplier>(`/suppliers/${id}`, data);
       toast.success("Supplier berhasil diupdate");
       return supplier;
     } catch (error: any) {
@@ -106,7 +109,7 @@ export function useSupplierActions() {
   const deleteSupplier = async (id: string) => {
     setIsLoading(true);
     try {
-      await apiClient.delete(`/suppliers/${id}`);
+      await api.delete(`/suppliers/${id}`);
       toast.success("Supplier berhasil dihapus");
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Gagal menghapus supplier");
@@ -119,7 +122,7 @@ export function useSupplierActions() {
   const toggleActive = async (id: string) => {
     setIsLoading(true);
     try {
-      await apiClient.patch(`/suppliers/${id}/toggle`);
+      await api.patch(`/suppliers/${id}/toggle`);
       toast.success("Status supplier berhasil diubah");
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Gagal mengubah status");

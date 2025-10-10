@@ -15,7 +15,10 @@ import {
   ReturnStats,
 } from "@/types/return";
 
-const fetcher = (url: string) => apiClient.get<any>(url);
+const fetcher = async (url: string) => {
+  const response = await apiClient.get(url);
+  return response.data.data || [];
+};
 
 // ============================================
 // PURCHASE RETURN HOOKS

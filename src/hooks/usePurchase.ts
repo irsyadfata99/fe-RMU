@@ -7,7 +7,10 @@ import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
 import { Purchase, PurchaseStats, CreatePurchaseRequest } from "@/types";
 
-const fetcher = (url: string) => apiClient.get<Purchase[]>(url);
+const fetcher = async (url: string) => {
+  const response = await apiClient.get(url);
+  return response.data.data || [];
+};
 
 // ============================================
 // GET ALL PURCHASES (with filters)

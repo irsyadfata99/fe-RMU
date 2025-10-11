@@ -1,4 +1,4 @@
-// src/app/(dashboard)/laporan/transaksi-harian/page.tsx
+// src/app/(dashboard)/laporan/barang-paling-laku/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -9,23 +9,25 @@ import { ReportTable, ReportColumn } from "@/components/laporan/report-table";
 import { ReportExportButton } from "@/components/laporan/report-export-button";
 import { useReport } from "@/hooks/useReport";
 import { useReportExport } from "@/hooks/useReportExport";
-import { Calendar } from "lucide-react";
-import { DailyTransactionReport } from "@/types/report";
+import { TrendingUp } from "lucide-react";
+import { BestSellingReport } from "@/types/report";
 
-export default function TransaksiHarianPage() {
+export default function BarangPalingLakuPage() {
   const [filters, setFilters] = useState({
+    limit: 50,
     startDate: "",
     endDate: "",
+    categoryId: "",
   });
 
-  const { data, isLoading } = useReport<DailyTransactionReport>({
-    endpoint: "/reports/daily-transactions",
+  const { data, isLoading } = useReport<BestSellingReport>({
+    endpoint: "/reports/best-selling",
     ...filters,
   });
 
   const { exportReport, isExporting } = useReportExport({
-    endpoint: "/reports/daily-transactions",
-    filename: "Laporan_Transaksi_Harian",
+    endpoint: "/reports/best-selling",
+    filename: "Laporan_Barang_Paling_Laku",
   });
 
   const handleFilterChange = (newFilters: any) => {
@@ -37,25 +39,68 @@ export default function TransaksiHarianPage() {
 
   const handleReset = () => {
     setFilters({
+      limit: 50,
       startDate: "",
       endDate: "",
+      categoryId: "",
     });
   };
 
   const handleExport = () => {
-    exportReport(filters);
+    const exportFilters = { ...filters };
+    delete (exportFilters as any).limit;
+    exportReport(exportFilters);
   };
 
-  const columns: ReportColumn<DailyTransactionReport>[] = [
+  const columns: ReportColumn<BestSellingReport>[] = [
     {
-      key: "date",
-      header: "Tanggal",
+      key: "rank",
+      header: "#",
+      width: "60px",
+      align: "center",
+      render: (value) => (
+        <div className="font-semibold text-primary">{value}</div>
+      ),
+    },
+    {
+      key: "sku",
+      header: "SKU",
       width: "120px",
     },
     {
-      key: "dayName",
-      header: "Hari",
+      key: "productName",
+      header: "Nama Produk",
+      width: "300px",
+    },
+    {
+      key: "category",
+      header: "Kategori",
+      width: "150px",
+    },
+    {
+      key: "unit",
+      header: "Satuan",
+      width: "80px",
+      align: "center",
+    },
+    {
+      key: "sellingPrice",
+      header: "Harga Jual",
+      format: "currency",
+      align: "right",
+      width: "130px",
+    },
+    {
+      key: "totalQuantity",
+      header: "Terjual",
+      format: "number",
+      align: "center",
       width: "100px",
+      render: (value) => (
+        <div className="font-semibold text-green-600">
+          {Number(value).toLocaleString("id-ID")}
+        </div>
+      ),
     },
     {
       key: "totalTransactions",
@@ -69,50 +114,14 @@ export default function TransaksiHarianPage() {
       header: "Total Pendapatan",
       format: "currency",
       align: "right",
-      width: "160px",
-      render: (value) => (
-        <div className="font-semibold text-green-600">
-          {new Intl.NumberFormat("id-ID", {
-            style: "currency",
-            currency: "IDR",
-          }).format(Number(value))}
-        </div>
-      ),
-    },
-    {
-      key: "tunaiCount",
-      header: "Tunai (Qty)",
-      format: "number",
-      align: "center",
-      width: "100px",
-    },
-    {
-      key: "tunaiRevenue",
-      header: "Tunai (Rp)",
-      format: "currency",
-      align: "right",
-      width: "150px",
-    },
-    {
-      key: "kreditCount",
-      header: "Kredit (Qty)",
-      format: "number",
-      align: "center",
-      width: "100px",
-    },
-    {
-      key: "kreditRevenue",
-      header: "Kredit (Rp)",
-      format: "currency",
-      align: "right",
       width: "150px",
     },
     {
       key: "avgPerTransaction",
       header: "Avg/Transaksi",
-      format: "currency",
-      align: "right",
-      width: "140px",
+      format: "number",
+      align: "center",
+      width: "120px",
     },
   ];
 
@@ -120,9 +129,9 @@ export default function TransaksiHarianPage() {
     <ReportLayout>
       <div className="flex items-start justify-between">
         <ReportHeader
-          title="Laporan Transaksi Harian"
-          description="Ringkasan transaksi penjualan per hari"
-          icon={<Calendar className="h-6 w-6 text-primary" />}
+          title="Laporan Barang Paling Laku"
+          description="Produk dengan penjualan tertinggi berdasarkan kuantitas"
+          icon={<TrendingUp className="h-6 w-6 text-primary" />}
         />
         <ReportExportButton
           onExport={handleExport}
@@ -142,7 +151,7 @@ export default function TransaksiHarianPage() {
         data={data}
         columns={columns}
         isLoading={isLoading}
-        emptyMessage="Tidak ada transaksi ditemukan pada periode ini"
+        emptyMessage="Tidak ada data penjualan ditemukan"
       />
     </ReportLayout>
   );

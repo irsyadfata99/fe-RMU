@@ -1,4 +1,4 @@
-// src/app/(dashboard)/laporan/transaksi-harian/page.tsx
+// src/app/(dashboard)/laporan/transaksi-per-member/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -9,53 +9,83 @@ import { ReportTable, ReportColumn } from "@/components/laporan/report-table";
 import { ReportExportButton } from "@/components/laporan/report-export-button";
 import { useReport } from "@/hooks/useReport";
 import { useReportExport } from "@/hooks/useReportExport";
-import { Calendar } from "lucide-react";
-import { DailyTransactionReport } from "@/types/report";
+import { Users } from "lucide-react";
+import { MemberTransactionReport } from "@/types/report";
 
-export default function TransaksiHarianPage() {
+export default function TransaksiPerMemberPage() {
   const [filters, setFilters] = useState({
+    page: 1,
+    limit: 50,
+    regionCode: "",
     startDate: "",
     endDate: "",
+    search: "",
+    sortBy: "totalSpending",
+    sortOrder: "DESC" as "DESC" | "ASC",
   });
 
-  const { data, isLoading } = useReport<DailyTransactionReport>({
-    endpoint: "/reports/daily-transactions",
+  const { data, pagination, isLoading } = useReport<MemberTransactionReport>({
+    endpoint: "/reports/member-transactions",
     ...filters,
   });
 
   const { exportReport, isExporting } = useReportExport({
-    endpoint: "/reports/daily-transactions",
-    filename: "Laporan_Transaksi_Harian",
+    endpoint: "/reports/member-transactions",
+    filename: "Laporan_Transaksi_Member",
   });
 
   const handleFilterChange = (newFilters: any) => {
     setFilters((prev) => ({
       ...prev,
       ...newFilters,
+      page: 1,
     }));
   };
 
   const handleReset = () => {
     setFilters({
+      page: 1,
+      limit: 50,
+      regionCode: "",
       startDate: "",
       endDate: "",
+      search: "",
+      sortBy: "totalSpending",
+      sortOrder: "DESC",
     });
   };
 
-  const handleExport = () => {
-    exportReport(filters);
+  const handlePageChange = (page: number) => {
+    setFilters((prev) => ({ ...prev, page }));
   };
 
-  const columns: ReportColumn<DailyTransactionReport>[] = [
+  const handleExport = () => {
+    const exportFilters = { ...filters };
+    delete (exportFilters as any).page;
+    delete (exportFilters as any).limit;
+    exportReport(exportFilters);
+  };
+
+  const columns: ReportColumn<MemberTransactionReport>[] = [
     {
-      key: "date",
-      header: "Tanggal",
+      key: "uniqueId",
+      header: "ID Member",
       width: "120px",
     },
     {
-      key: "dayName",
-      header: "Hari",
-      width: "100px",
+      key: "fullName",
+      header: "Nama Lengkap",
+      width: "200px",
+    },
+    {
+      key: "regionName",
+      header: "Wilayah",
+      width: "150px",
+    },
+    {
+      key: "whatsapp",
+      header: "WhatsApp",
+      width: "130px",
     },
     {
       key: "totalTransactions",
@@ -65,11 +95,11 @@ export default function TransaksiHarianPage() {
       width: "100px",
     },
     {
-      key: "totalRevenue",
-      header: "Total Pendapatan",
+      key: "totalSpending",
+      header: "Total Belanja",
       format: "currency",
       align: "right",
-      width: "160px",
+      width: "150px",
       render: (value) => (
         <div className="font-semibold text-green-600">
           {new Intl.NumberFormat("id-ID", {
@@ -80,32 +110,18 @@ export default function TransaksiHarianPage() {
       ),
     },
     {
-      key: "tunaiCount",
-      header: "Tunai (Qty)",
-      format: "number",
-      align: "center",
-      width: "100px",
-    },
-    {
-      key: "tunaiRevenue",
-      header: "Tunai (Rp)",
+      key: "totalDebt",
+      header: "Hutang",
       format: "currency",
       align: "right",
-      width: "150px",
+      width: "140px",
     },
     {
-      key: "kreditCount",
-      header: "Kredit (Qty)",
+      key: "totalPoints",
+      header: "Poin",
       format: "number",
       align: "center",
-      width: "100px",
-    },
-    {
-      key: "kreditRevenue",
-      header: "Kredit (Rp)",
-      format: "currency",
-      align: "right",
-      width: "150px",
+      width: "80px",
     },
     {
       key: "avgPerTransaction",
@@ -114,15 +130,31 @@ export default function TransaksiHarianPage() {
       align: "right",
       width: "140px",
     },
+    {
+      key: "isActive",
+      header: "Status",
+      width: "100px",
+      render: (value) => (
+        <span
+          className={`inline-block px-2 py-1 text-xs rounded ${
+            value === "Aktif"
+              ? "bg-green-100 text-green-700"
+              : "bg-gray-100 text-gray-700"
+          }`}
+        >
+          {value}
+        </span>
+      ),
+    },
   ];
 
   return (
     <ReportLayout>
       <div className="flex items-start justify-between">
         <ReportHeader
-          title="Laporan Transaksi Harian"
-          description="Ringkasan transaksi penjualan per hari"
-          icon={<Calendar className="h-6 w-6 text-primary" />}
+          title="Laporan Transaksi per Member"
+          description="Ringkasan transaksi berdasarkan member"
+          icon={<Users className="h-6 w-6 text-primary" />}
         />
         <ReportExportButton
           onExport={handleExport}
@@ -135,14 +167,15 @@ export default function TransaksiHarianPage() {
         filters={filters}
         onFilterChange={handleFilterChange}
         onReset={handleReset}
-        showSearch={false}
       />
 
       <ReportTable
         data={data}
         columns={columns}
+        pagination={pagination}
+        onPageChange={handlePageChange}
         isLoading={isLoading}
-        emptyMessage="Tidak ada transaksi ditemukan pada periode ini"
+        emptyMessage="Tidak ada data member ditemukan"
       />
     </ReportLayout>
   );

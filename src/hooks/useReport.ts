@@ -9,7 +9,7 @@ interface UseReportOptions {
   startDate?: string;
   endDate?: string;
   search?: string;
-  [key: string]: string | number | undefined;
+  [key: string]: string | number | boolean | undefined;
 }
 
 interface Pagination {
@@ -19,10 +19,21 @@ interface Pagination {
   totalPages: number;
 }
 
-interface ApiResponse<T> {
+// ✅ FIXED: Support both response structures
+interface PaginatedApiResponse<T> {
+  success: boolean;
   data: T[];
   pagination: Pagination;
+  message?: string;
 }
+
+interface SimpleApiResponse<T> {
+  success: boolean;
+  data: T[];
+  message?: string;
+}
+
+type ApiResponse<T> = PaginatedApiResponse<T> | SimpleApiResponse<T>;
 
 export function useReport<T = Record<string, unknown>>({
   endpoint,
@@ -39,11 +50,29 @@ export function useReport<T = Record<string, unknown>>({
   const queryString = queryParams.toString();
   const url = queryString ? `${endpoint}?${queryString}` : endpoint;
 
-  const { data, error, mutate, isLoading } = useSWR<ApiResponse<T>>(
+  const {
+    data: responseData,
+    error,
+    mutate,
+    isLoading,
+  } = useSWR<ApiResponse<T>>(
     url,
     async (url: string) => {
-      const response = await apiClient.get<ApiResponse<T>>(url);
-      return response.data;
+      try {
+        const response = await apiClient.get(url);
+
+        // ✅ FIXED: Handle different response structures
+        // Case 1: Response is already unwrapped (from apiClient)
+        if (response.data) {
+          return response;
+        }
+
+        // Case 2: Response needs unwrapping
+        return response.data;
+      } catch (error) {
+        console.error(`Error fetching ${url}:`, error);
+        throw error;
+      }
     },
     {
       revalidateOnFocus: false,
@@ -51,14 +80,44 @@ export function useReport<T = Record<string, unknown>>({
     }
   );
 
-  return {
-    data: (data?.data || []) as T[],
-    pagination: (data?.pagination || {
+  // ✅ FIXED: Safely extract data and pagination
+  const extractData = (): T[] => {
+    if (!responseData) return [];
+
+    // If responseData.data is an array, return it
+    if (Array.isArray(responseData.data)) {
+      return responseData.data as T[];
+    }
+
+    // If responseData itself is an array (direct array response)
+    if (Array.isArray(responseData)) {
+      return responseData as T[];
+    }
+
+    return [];
+  };
+
+  const extractPagination = (): Pagination => {
+    const defaultPagination: Pagination = {
       page: 1,
       limit: 50,
       total: 0,
       totalPages: 0,
-    }) as Pagination,
+    };
+
+    if (!responseData) return defaultPagination;
+
+    // Check if response has pagination property
+    if ("pagination" in responseData && responseData.pagination) {
+      return responseData.pagination;
+    }
+
+    return defaultPagination;
+  };
+
+  return {
+    data: extractData(),
+    pagination: extractPagination(),
     isLoading,
     isError: error,
     mutate,

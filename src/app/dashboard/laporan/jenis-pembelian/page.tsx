@@ -1,4 +1,4 @@
-// src/app/(dashboard)/laporan/barang-return/page.tsx
+// src/app/(dashboard)/laporan/jenis-pembelian/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -9,8 +9,8 @@ import { ReportTable, ReportColumn } from "@/components/laporan/report-table";
 import { ReportExportButton } from "@/components/laporan/report-export-button";
 import { useReport } from "@/hooks/useReport";
 import { useReportExport } from "@/hooks/useReportExport";
-import { RotateCcw } from "lucide-react";
-import { ReturnReport } from "@/types/report";
+import { ShoppingCart } from "lucide-react";
+import { PurchaseReport } from "@/types/report";
 import {
   Select,
   SelectContent,
@@ -20,25 +20,25 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-export default function BarangReturnPage() {
+export default function JenisPembelianPage() {
   const [filters, setFilters] = useState({
     page: 1,
     limit: 50,
-    type: "",
-    status: "",
+    purchaseType: "",
+    supplierId: "",
     startDate: "",
     endDate: "",
     search: "",
   });
 
-  const { data, pagination, isLoading, mutate } = useReport<ReturnReport>({
-    endpoint: "/reports/returns",
+  const { data, pagination, isLoading } = useReport<PurchaseReport>({
+    endpoint: "/reports/purchases",
     ...filters,
   });
 
   const { exportReport, isExporting } = useReportExport({
-    endpoint: "/reports/returns",
-    filename: "Laporan_Barang_Return",
+    endpoint: "/reports/purchases",
+    filename: "Laporan_Jenis_Pembelian",
   });
 
   const handleFilterChange = (newFilters: any) => {
@@ -53,8 +53,8 @@ export default function BarangReturnPage() {
     setFilters({
       page: 1,
       limit: 50,
-      type: "",
-      status: "",
+      purchaseType: "",
+      supplierId: "",
       startDate: "",
       endDate: "",
       search: "",
@@ -72,43 +72,42 @@ export default function BarangReturnPage() {
     exportReport(exportFilters);
   };
 
-  const columns: ReportColumn<ReturnReport>[] = [
+  const columns: ReportColumn<PurchaseReport>[] = [
     {
-      key: "type",
-      header: "Tipe",
-      width: "140px",
-      render: (value) => (
-        <span
-          className={`inline-block px-2 py-1 text-xs rounded ${
-            value === "Purchase Return"
-              ? "bg-blue-100 text-blue-700"
-              : "bg-green-100 text-green-700"
-          }`}
-        >
-          {value}
-        </span>
-      ),
-    },
-    {
-      key: "returnNumber",
-      header: "No. Retur",
+      key: "invoiceNumber",
+      header: "No. Faktur",
       width: "150px",
     },
     {
-      key: "returnDate",
+      key: "purchaseDate",
       header: "Tanggal",
       width: "110px",
     },
     {
-      key: "referenceNumber",
-      header: "No. Referensi",
-      width: "150px",
+      key: "supplierName",
+      header: "Supplier",
+      width: "200px",
     },
     {
-      key: "supplierName",
-      header: "Supplier/Member",
-      width: "200px",
-      render: (value, row) => row.supplierName || row.memberName || "-",
+      key: "purchaseType",
+      header: "Jenis",
+      width: "120px",
+      render: (value) => {
+        const colors = {
+          TUNAI: "bg-green-100 text-green-700",
+          KREDIT: "bg-yellow-100 text-yellow-700",
+          KONSINYASI: "bg-blue-100 text-blue-700",
+        };
+        return (
+          <span
+            className={`inline-block px-2 py-1 text-xs rounded ${
+              colors[value as keyof typeof colors]
+            }`}
+          >
+            {value}
+          </span>
+        );
+      },
     },
     {
       key: "totalAmount",
@@ -118,22 +117,45 @@ export default function BarangReturnPage() {
       width: "140px",
     },
     {
+      key: "paidAmount",
+      header: "Dibayar",
+      format: "currency",
+      align: "right",
+      width: "140px",
+    },
+    {
+      key: "remainingDebt",
+      header: "Sisa Hutang",
+      format: "currency",
+      align: "right",
+      width: "140px",
+      render: (value) =>
+        Number(value) > 0 ? (
+          <div className="font-semibold text-red-600">
+            {new Intl.NumberFormat("id-ID", {
+              style: "currency",
+              currency: "IDR",
+            }).format(Number(value))}
+          </div>
+        ) : (
+          <div className="text-muted-foreground">-</div>
+        ),
+    },
+    {
       key: "status",
       header: "Status",
       format: "badge",
       width: "110px",
     },
     {
-      key: "itemCount",
-      header: "Item",
-      format: "number",
-      align: "center",
-      width: "80px",
+      key: "dueDate",
+      header: "Jatuh Tempo",
+      width: "110px",
     },
     {
-      key: "reason",
-      header: "Alasan",
-      width: "250px",
+      key: "inputBy",
+      header: "Input By",
+      width: "150px",
     },
   ];
 
@@ -141,9 +163,9 @@ export default function BarangReturnPage() {
     <ReportLayout>
       <div className="flex items-start justify-between">
         <ReportHeader
-          title="Laporan Barang Return"
-          description="Daftar semua barang yang diretur (pembelian & penjualan)"
-          icon={<RotateCcw className="h-6 w-6 text-primary" />}
+          title="Laporan Jenis Pembelian"
+          description="Daftar pembelian berdasarkan jenis pembayaran"
+          icon={<ShoppingCart className="h-6 w-6 text-primary" />}
         />
         <ReportExportButton
           onExport={handleExport}
@@ -155,40 +177,23 @@ export default function BarangReturnPage() {
       <div className="space-y-4 rounded-lg border bg-card p-4">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
-            <Label>Tipe Return</Label>
+            <Label>Jenis Pembelian</Label>
             <Select
-              value={filters.type}
+              value={filters.purchaseType}
               onValueChange={(value) =>
-                handleFilterChange({ type: value === "all" ? "" : value })
+                handleFilterChange({
+                  purchaseType: value === "all" ? "" : value,
+                })
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Semua Tipe" />
+                <SelectValue placeholder="Semua Jenis" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua Tipe</SelectItem>
-                <SelectItem value="purchase">Purchase Return</SelectItem>
-                <SelectItem value="sales">Sales Return</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select
-              value={filters.status}
-              onValueChange={(value) =>
-                handleFilterChange({ status: value === "all" ? "" : value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Semua Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="APPROVED">Approved</SelectItem>
-                <SelectItem value="REJECTED">Rejected</SelectItem>
+                <SelectItem value="all">Semua Jenis</SelectItem>
+                <SelectItem value="TUNAI">Tunai</SelectItem>
+                <SelectItem value="KREDIT">Kredit</SelectItem>
+                <SelectItem value="KONSINYASI">Konsinyasi</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -207,7 +212,7 @@ export default function BarangReturnPage() {
         pagination={pagination}
         onPageChange={handlePageChange}
         isLoading={isLoading}
-        emptyMessage="Tidak ada data return ditemukan"
+        emptyMessage="Tidak ada data pembelian ditemukan"
       />
     </ReportLayout>
   );

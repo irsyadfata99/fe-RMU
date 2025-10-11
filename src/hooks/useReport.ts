@@ -19,11 +19,13 @@ interface Pagination {
   totalPages: number;
 }
 
-// ✅ FIXED: Support both response structures
+// ✅ FIXED: Support all response structures
 interface PaginatedApiResponse<T> {
   success: boolean;
-  data: T[];
-  pagination: Pagination;
+  data: {
+    data: T[];
+    pagination: Pagination;
+  };
   message?: string;
 }
 
@@ -35,10 +37,7 @@ interface SimpleApiResponse<T> {
 
 type ApiResponse<T> = PaginatedApiResponse<T> | SimpleApiResponse<T>;
 
-export function useReport<T = Record<string, unknown>>({
-  endpoint,
-  ...params
-}: UseReportOptions) {
+export function useReport<T = Record<string, unknown>>({ endpoint, ...params }: UseReportOptions) {
   // Build query string
   const queryParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -60,14 +59,6 @@ export function useReport<T = Record<string, unknown>>({
     async (url: string) => {
       try {
         const response = await apiClient.get(url);
-
-        // ✅ FIXED: Handle different response structures
-        // Case 1: Response is already unwrapped (from apiClient)
-        if (response.data) {
-          return response;
-        }
-
-        // Case 2: Response needs unwrapping
         return response.data;
       } catch (error) {
         console.error(`Error fetching ${url}:`, error);
@@ -80,23 +71,33 @@ export function useReport<T = Record<string, unknown>>({
     }
   );
 
-  // ✅ FIXED: Safely extract data and pagination
+  // ✅ FIXED: Safely extract data with proper nested structure handling
   const extractData = (): T[] => {
     if (!responseData) return [];
 
-    // If responseData.data is an array, return it
+    // Case 1: Paginated response { data: { data: [], pagination: {} } }
+    if (responseData.data && typeof responseData.data === "object" && !Array.isArray(responseData.data) && "data" in responseData.data) {
+      const nestedData = (responseData.data as { data: unknown }).data;
+      if (Array.isArray(nestedData)) {
+        return nestedData as T[];
+      }
+    }
+
+    // Case 2: Simple response { data: [] }
     if (Array.isArray(responseData.data)) {
       return responseData.data as T[];
     }
 
-    // If responseData itself is an array (direct array response)
+    // Case 3: Direct array (fallback)
     if (Array.isArray(responseData)) {
       return responseData as T[];
     }
 
+    console.warn(`[useReport] Unexpected data structure for ${url}:`, responseData);
     return [];
   };
 
+  // ✅ FIXED: Safely extract pagination
   const extractPagination = (): Pagination => {
     const defaultPagination: Pagination = {
       page: 1,
@@ -107,9 +108,14 @@ export function useReport<T = Record<string, unknown>>({
 
     if (!responseData) return defaultPagination;
 
-    // Check if response has pagination property
+    // Case 1: Nested pagination { data: { data: [], pagination: {} } }
+    if (responseData.data && typeof responseData.data === "object" && !Array.isArray(responseData.data) && "pagination" in responseData.data) {
+      return (responseData.data as { pagination: Pagination }).pagination;
+    }
+
+    // Case 2: Direct pagination { pagination: {} }
     if ("pagination" in responseData && responseData.pagination) {
-      return responseData.pagination;
+      return responseData.pagination as Pagination;
     }
 
     return defaultPagination;

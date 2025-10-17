@@ -3,12 +3,13 @@
 // ============================================
 import useSWR from "swr";
 import { Product } from "@/types";
-import api from "@/lib/api";
+import { apiClient as api } from "@/lib/api";
 import { arrayFetcher, itemFetcher, ensureArray } from "@/lib/swr-fetcher";
 import { useState } from "react";
 import { toast } from "sonner";
+import type { ProductForm as ProductFormData } from "@/lib/validations";
 
-export function useProducts(params?: any) {
+export function useProducts(params?: Record<string, unknown>) {
   const queryString = new URLSearchParams(
     Object.entries(params || {}).reduce((acc, [key, value]) => {
       if (value !== undefined && value !== null) {
@@ -18,11 +19,7 @@ export function useProducts(params?: any) {
     }, {} as Record<string, string>)
   ).toString();
 
-  const { data, error, isLoading, mutate } = useSWR(
-    `/products?${queryString}`,
-    arrayFetcher,
-    { revalidateOnFocus: false }
-  );
+  const { data, error, isLoading, mutate } = useSWR(`/products?${queryString}`, arrayFetcher, { revalidateOnFocus: false });
 
   return {
     products: ensureArray(data),
@@ -35,7 +32,10 @@ export function useProducts(params?: any) {
 export function useProduct(id: string) {
   const { data, error, isLoading, mutate } = useSWR(
     id ? `/products/${id}` : null,
-    itemFetcher,
+    async (url: string) => {
+      const result = await itemFetcher(url);
+      return result as Product | undefined;
+    },
     { revalidateOnFocus: false }
   );
 
@@ -47,10 +47,12 @@ export function useProduct(id: string) {
   };
 }
 
+import { ProductForm } from "@/lib/validations";
+
 export function useProductActions() {
   const [isLoading, setIsLoading] = useState(false);
 
-  const createProduct = async (data: any) => {
+  const createProduct = async (data: ProductFormData) => {
     setIsLoading(true);
     try {
       const product = await api.post<Product>("/products", data);
@@ -61,12 +63,30 @@ export function useProductActions() {
     }
   };
 
-  const updateProduct = async (id: string, data: any) => {
+  const updateProduct = async (id: string, data: ProductFormData) => {
     setIsLoading(true);
     try {
-      const product = await api.put<Product>(`/products/${id}`, data);
+      // Transform data untuk match dengan backend API
+      const payload = {
+        name: data.name,
+        barcode: data.barcode,
+        categoryId: data.categoryId,
+        supplierId: data.supplierId || null,
+        unit: data.unit,
+        purchasePrice: data.purchasePrice,
+        sellingPrice: data.sellingPriceGeneral, // Backend expect "sellingPrice"
+        minStock: data.minStock,
+        description: data.description || null,
+      };
+
+      console.log("Sending to API:", payload); // Debug
+      const product = await api.put<Product>(`/products/${id}`, payload);
       toast.success("Produk berhasil diupdate");
       return product;
+    } catch (error) {
+      console.error("Update error:", error);
+      toast.error("Gagal mengupdate produk");
+      throw error;
     } finally {
       setIsLoading(false);
     }

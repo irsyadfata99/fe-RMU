@@ -2,31 +2,15 @@
 "use client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  productSchema,
-  ProductForm as ProductFormType,
-} from "@/lib/validations";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { productSchema, ProductForm as ProductFormType } from "@/lib/validations";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Product, ProductType } from "@/types";
 import useSWR from "swr";
 import { arrayFetcher, ensureArray } from "@/lib/swr-fetcher";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ProductFormProps {
   initialData?: Product;
@@ -34,12 +18,7 @@ interface ProductFormProps {
   isLoading: boolean;
 }
 
-export function ProductForm({
-  initialData,
-  onSubmit,
-  isLoading,
-}: ProductFormProps) {
-  // ✅ FIX: Use arrayFetcher dan ensureArray
+export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormProps) {
   const { data: categoriesData } = useSWR("/categories", arrayFetcher);
   const { data: suppliersData } = useSWR("/suppliers", arrayFetcher);
 
@@ -55,7 +34,7 @@ export function ProductForm({
           productType: initialData.productType,
           expiryDate: initialData.expiryDate,
           minStock: initialData.minStock,
-          description: initialData.description,
+          description: initialData.description ?? "", // ✅ Gunakan nullish coalescing
           sellingPriceGeneral: initialData.sellingPriceGeneral,
           sellingPriceMember: initialData.sellingPriceMember,
           points: initialData.points || 0,
@@ -73,6 +52,7 @@ export function ProductForm({
           name: "",
           productType: ProductType.CASH,
           minStock: 0,
+          description: "", // ✅ Default ke empty string
           sellingPriceGeneral: 0,
           sellingPriceMember: 0,
           points: 0,
@@ -114,10 +94,7 @@ export function ProductForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Kategori *</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih kategori" />
@@ -180,12 +157,7 @@ export function ProductForm({
                   <FormItem>
                     <FormLabel>Harga Beli *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
+                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -199,12 +171,7 @@ export function ProductForm({
                   <FormItem>
                     <FormLabel>Harga Jual Umum *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
+                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -219,17 +186,10 @@ export function ProductForm({
                 <FormItem>
                   <FormLabel>Harga Jual Member *</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
+                    <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
                   </FormControl>
                   <FormMessage />
-                  <p className="text-xs text-muted-foreground">
-                    Harga khusus untuk anggota koperasi
-                  </p>
+                  <p className="text-xs text-muted-foreground">Harga khusus untuk anggota koperasi</p>
                 </FormItem>
               )}
             />
@@ -242,12 +202,7 @@ export function ProductForm({
                   <FormItem>
                     <FormLabel>Stok Awal *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
+                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -261,12 +216,7 @@ export function ProductForm({
                   <FormItem>
                     <FormLabel>Stok Minimum *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
+                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -285,10 +235,7 @@ export function ProductForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Supplier</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih supplier" />
@@ -320,12 +267,7 @@ export function ProductForm({
                 <FormItem>
                   <FormLabel>Point per Unit</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
+                    <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -338,10 +280,7 @@ export function ProductForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Jenis Produk</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih jenis" />
@@ -349,12 +288,8 @@ export function ProductForm({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value={ProductType.CASH}>Tunai</SelectItem>
-                      <SelectItem value={ProductType.INSTALLMENT}>
-                        Beli Putus
-                      </SelectItem>
-                      <SelectItem value={ProductType.CONSIGNMENT}>
-                        Konsinyasi
-                      </SelectItem>
+                      <SelectItem value={ProductType.INSTALLMENT}>Beli Putus</SelectItem>
+                      <SelectItem value={ProductType.CONSIGNMENT}>Konsinyasi</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -372,7 +307,11 @@ export function ProductForm({
                     <textarea
                       placeholder="Deskripsi produk (opsional)"
                       className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                      {...field}
+                      value={field.value ?? ""} // ✅ Pastikan tidak pernah null
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
                     />
                   </FormControl>
                   <FormMessage />

@@ -1,6 +1,7 @@
 // src/app/dashboard/barang/[id]/edit/page.tsx
 "use client";
 
+import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useProduct, useProductActions } from "@/hooks/useProduct";
 import { ProductForm } from "@/components/products/product-form";
@@ -9,19 +10,17 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import type { ProductForm as ProductFormType } from "@/lib/validations";
 
-export default function EditProductPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
-  const { product, isLoading } = useProduct(params.id);
+  const { product, isLoading } = useProduct(id);
   const { updateProduct, isLoading: isUpdating } = useProductActions();
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: ProductFormType) => {
     try {
-      await updateProduct(params.id, data);
+      await updateProduct(id, data);
       router.push("/dashboard/barang");
     } catch (error) {
       console.error(error);
@@ -44,6 +43,12 @@ export default function EditProductPage({
     );
   }
 
+  // Ensure description is never null for the form
+  const safeProduct = {
+    ...product,
+    description: product.description ?? "",
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -65,11 +70,7 @@ export default function EditProductPage({
           <CardTitle>Informasi Produk</CardTitle>
         </CardHeader>
         <CardContent>
-          <ProductForm
-            initialData={product}
-            onSubmit={handleSubmit}
-            isLoading={isUpdating}
-          />
+          <ProductForm initialData={safeProduct} onSubmit={handleSubmit} isLoading={isUpdating} />
         </CardContent>
       </Card>
     </div>

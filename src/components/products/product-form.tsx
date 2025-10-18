@@ -1,4 +1,3 @@
-// src/components/products/product-form.tsx
 "use client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,49 +17,61 @@ interface ProductFormProps {
   isLoading: boolean;
 }
 
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+}
+
 export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormProps) {
   const { data: categoriesData } = useSWR("/categories", arrayFetcher);
   const { data: suppliersData } = useSWR("/suppliers", arrayFetcher);
 
-  const categories = ensureArray(categoriesData);
-  const suppliers = ensureArray(suppliersData);
+  const categories = ensureArray(categoriesData) as Category[];
+  const suppliers = ensureArray(suppliersData) as Supplier[];
 
   const form = useForm<ProductFormType>({
     resolver: zodResolver(productSchema),
     defaultValues: initialData
       ? {
-          categoryId: initialData.categoryId,
-          name: initialData.name,
-          productType: initialData.productType,
-          expiryDate: initialData.expiryDate,
-          minStock: initialData.minStock,
-          description: initialData.description ?? "", // ✅ Gunakan nullish coalescing
-          sellingPriceGeneral: initialData.sellingPriceGeneral,
-          sellingPriceMember: initialData.sellingPriceMember,
-          points: initialData.points || 0,
-          unit: initialData.unit,
-          supplierId: initialData.supplierId || "",
-          barcode: initialData.barcode || "",
-          purchaseType: "Cash",
-          invoiceNo: "",
-          maxStock: 0,
-          purchasePrice: initialData.purchasePrice,
-          stock: initialData.stock,
+          categoryId: initialData.categoryId || "",
+          name: initialData.name || "",
+          productType: initialData.productType || ProductType.CASH,
+          expiryDate: initialData.expiryDate || undefined,
+          minStock: Number(initialData.minStock) || 0,
+          maxStock: Number(initialData.maxStock) || 0,
+          description: initialData.description || "",
+          sellingPriceGeneral: Number(initialData.sellingPriceGeneral) || 0,
+          sellingPriceMember: Number(initialData.sellingPriceMember) || 0,
+          points: Number(initialData.points) || 0,
+          unit: initialData.unit || "PCS",
+          supplierId: initialData.supplierId || undefined,
+          barcode: initialData.barcode || undefined,
+          purchaseType: (initialData.purchaseType as "TUNAI" | "KREDIT" | "KONSINYASI") || "TUNAI",
+          invoiceNo: initialData.invoiceNo || undefined,
+          purchasePrice: Number(initialData.purchasePrice) || 0,
+          stock: Number(initialData.stock) || 0,
         }
       : {
           categoryId: "",
           name: "",
           productType: ProductType.CASH,
+          expiryDate: undefined,
           minStock: 0,
-          description: "", // ✅ Default ke empty string
+          maxStock: 0,
+          description: "",
           sellingPriceGeneral: 0,
           sellingPriceMember: 0,
           points: 0,
           unit: "PCS",
-          supplierId: "",
-          barcode: "",
-          purchaseType: "Cash",
-          maxStock: 0,
+          supplierId: undefined,
+          barcode: undefined,
+          purchaseType: "TUNAI",
+          invoiceNo: undefined,
           purchasePrice: 0,
           stock: 0,
         },
@@ -94,7 +105,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Kategori *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih kategori" />
@@ -106,7 +117,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                           Tidak ada kategori
                         </SelectItem>
                       ) : (
-                        categories.map((cat: any) => (
+                        categories.map((cat) => (
                           <SelectItem key={cat.id} value={cat.id}>
                             {cat.name}
                           </SelectItem>
@@ -141,7 +152,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                   <FormItem>
                     <FormLabel>Barcode</FormLabel>
                     <FormControl>
-                      <Input placeholder="8991234567890" {...field} />
+                      <Input placeholder="8991234567890" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -157,7 +168,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                   <FormItem>
                     <FormLabel>Harga Beli *</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value) || 0)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -171,7 +182,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                   <FormItem>
                     <FormLabel>Harga Jual Umum *</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value) || 0)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -186,7 +197,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                 <FormItem>
                   <FormLabel>Harga Jual Member *</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                    <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value) || 0)} />
                   </FormControl>
                   <FormMessage />
                   <p className="text-xs text-muted-foreground">Harga khusus untuk anggota koperasi</p>
@@ -202,7 +213,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                   <FormItem>
                     <FormLabel>Stok Awal *</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value) || 0)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -216,7 +227,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                   <FormItem>
                     <FormLabel>Stok Minimum *</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                      <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value) || 0)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -235,24 +246,42 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Supplier</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : value)} value={field.value || "none"}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih supplier" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {suppliers.length === 0 ? (
-                        <SelectItem value="none" disabled>
-                          Tidak ada supplier
+                      <SelectItem value="none">Tidak ada supplier</SelectItem>
+                      {suppliers.map((sup) => (
+                        <SelectItem key={sup.id} value={sup.id}>
+                          {sup.name}
                         </SelectItem>
-                      ) : (
-                        suppliers.map((sup: any) => (
-                          <SelectItem key={sup.id} value={sup.id}>
-                            {sup.name}
-                          </SelectItem>
-                        ))
-                      )}
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="purchaseType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Jenis Pembelian *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih jenis pembelian" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="TUNAI">Tunai</SelectItem>
+                      <SelectItem value="KREDIT">Kredit</SelectItem>
+                      <SelectItem value="KONSINYASI">Konsinyasi</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -267,7 +296,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                 <FormItem>
                   <FormLabel>Point per Unit</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                    <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value) || 0)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -280,7 +309,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Jenis Produk</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih jenis" />
@@ -307,7 +336,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
                     <textarea
                       placeholder="Deskripsi produk (opsional)"
                       className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                      value={field.value ?? ""} // ✅ Pastikan tidak pernah null
+                      value={field.value || ""}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
                       name={field.name}

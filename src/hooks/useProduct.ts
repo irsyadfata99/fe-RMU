@@ -47,8 +47,6 @@ export function useProduct(id: string) {
   };
 }
 
-import { ProductForm } from "@/lib/validations";
-
 export function useProductActions() {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -66,17 +64,25 @@ export function useProductActions() {
   const updateProduct = async (id: string, data: ProductFormData) => {
     setIsLoading(true);
     try {
-      // Transform data untuk match dengan backend API
+      // ✅ FIX: Transform data untuk match dengan backend API - LENGKAP
       const payload = {
         name: data.name,
-        barcode: data.barcode,
+        barcode: data.barcode || null,
         categoryId: data.categoryId,
         supplierId: data.supplierId || null,
+        productType: data.productType,
+        purchaseType: data.purchaseType,
+        invoiceNo: data.invoiceNo || null,
+        expiryDate: data.expiryDate || null,
+        description: data.description || null,
         unit: data.unit,
         purchasePrice: data.purchasePrice,
-        sellingPrice: data.sellingPriceGeneral, // Backend expect "sellingPrice"
+        sellingPriceGeneral: data.sellingPriceGeneral,
+        sellingPriceMember: data.sellingPriceMember,
+        points: data.points || 0,
+        stock: data.stock,
         minStock: data.minStock,
-        description: data.description || null,
+        maxStock: data.maxStock || 0,
       };
 
       console.log("Sending to API:", payload); // Debug

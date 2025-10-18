@@ -1,19 +1,13 @@
 // ============================================
 // src/components/products/product-table.tsx
+// ✅ REMOVED status badge column (no soft delete)
 // ============================================
 "use client";
 import { Product } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { ensureArray } from "@/lib/swr-fetcher";
 import { StockBadge } from "./stock-badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Eye } from "lucide-react";
 import Link from "next/link";
@@ -25,11 +19,7 @@ interface ProductTableProps {
   userRole: string;
 }
 
-export function ProductTable({
-  products,
-  onDelete,
-  userRole,
-}: ProductTableProps) {
+export function ProductTable({ products, onDelete, userRole }: ProductTableProps) {
   const safeProducts = ensureArray(products);
 
   if (safeProducts.length === 0) {
@@ -51,7 +41,7 @@ export function ProductTable({
             <TableHead>Kategori</TableHead>
             <TableHead>Harga Jual</TableHead>
             <TableHead>Stok</TableHead>
-            <TableHead>Status</TableHead>
+            {/* ✅ REMOVED: Status column */}
             <TableHead className="text-right">Aksi</TableHead>
           </TableRow>
         </TableHeader>
@@ -59,20 +49,21 @@ export function ProductTable({
           {safeProducts.map((product) => (
             <TableRow key={product.id}>
               <TableCell className="font-mono text-xs">{product.sku}</TableCell>
-              <TableCell className="font-mono text-xs">
-                {product.barcode || "-"}
-              </TableCell>
+              <TableCell className="font-mono text-xs">{product.barcode || "-"}</TableCell>
               <TableCell className="font-medium">{product.name}</TableCell>
               <TableCell>
                 <Badge variant="outline">{product.category?.name || "-"}</Badge>
               </TableCell>
               <TableCell>{formatCurrency(product.sellingPrice)}</TableCell>
               <TableCell>
-                {product.stock} {product.unit}
+                <div className="flex items-center gap-2">
+                  <span>
+                    {product.stock} {product.unit}
+                  </span>
+                  <StockBadge stock={product.stock} minStock={product.minStock} />
+                </div>
               </TableCell>
-              <TableCell>
-                <StockBadge stock={product.stock} minStock={product.minStock} />
-              </TableCell>
+              {/* ✅ REMOVED: Status badge cell */}
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                   <Link href={`/dashboard/barang/${product.id}`}>
@@ -90,7 +81,11 @@ export function ProductTable({
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => onDelete(product.id)}
+                        onClick={() => {
+                          if (window.confirm(`⚠️ PERINGATAN!\n\n` + `Produk "${product.name}" akan DIHAPUS PERMANENT dari database.\n\n` + `Data tidak dapat dikembalikan!\n\n` + `Yakin ingin melanjutkan?`)) {
+                            onDelete(product.id);
+                          }
+                        }}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>

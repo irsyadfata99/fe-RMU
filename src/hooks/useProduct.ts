@@ -1,5 +1,6 @@
 // ============================================
-// src/hooks/useProduct.ts
+// src/hooks/useProduct.ts - FIXED
+// ✅ Simplified response handling - apiClient already extracts data
 // ============================================
 import useSWR from "swr";
 import { Product } from "@/types";
@@ -64,7 +65,6 @@ export function useProductActions() {
   const updateProduct = async (id: string, data: ProductFormData) => {
     setIsLoading(true);
     try {
-      // ✅ FIX: Transform data untuk match dengan backend API - LENGKAP
       const payload = {
         name: data.name,
         barcode: data.barcode || null,
@@ -85,7 +85,7 @@ export function useProductActions() {
         maxStock: data.maxStock || 0,
       };
 
-      console.log("Sending to API:", payload); // Debug
+      console.log("Sending to API:", payload);
       const product = await api.put<Product>(`/products/${id}`, payload);
       toast.success("Produk berhasil diupdate");
       return product;
@@ -108,8 +108,36 @@ export function useProductActions() {
     }
   };
 
-  const searchByBarcode = async (barcode: string) => {
-    return await api.get<Product>(`/products/barcode/${barcode}`);
+  // ✅ CRITICAL FIX: searchByBarcode now returns clean Product data
+  // apiClient.get already extracts response.data.data
+  const searchByBarcode = async (barcode: string): Promise<Product> => {
+    try {
+      console.log("🔍 Searching barcode:", barcode);
+
+      // apiClient.get already handles response extraction
+      const product = await api.get<Product>(`/products/barcode/${barcode}`);
+
+      console.log("✅ Product found:", {
+        id: product.id,
+        name: product.name,
+        sellingPriceGeneral: product.sellingPriceGeneral,
+        sellingPriceMember: product.sellingPriceMember,
+      });
+
+      // ✅ Validate critical fields
+      if (!product || !product.id) {
+        throw new Error("Data produk tidak valid");
+      }
+
+      if (!product.sellingPriceGeneral || !product.sellingPriceMember) {
+        throw new Error(`Produk ${product.name} tidak memiliki data harga yang lengkap`);
+      }
+
+      return product;
+    } catch (error) {
+      console.error("❌ Error in searchByBarcode:", error);
+      throw error;
+    }
   };
 
   return {

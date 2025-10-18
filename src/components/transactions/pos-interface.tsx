@@ -29,8 +29,6 @@ interface Member {
   regionName: string;
 }
 
-// ✅ Removed unused Transaction interface
-
 interface PaymentData {
   saleType: "TUNAI" | "TEMPO";
   paymentReceived: number;
@@ -39,7 +37,6 @@ interface PaymentData {
   notes?: string;
 }
 
-// ✅ Add proper API response interfaces
 interface SaleResponse {
   id: string;
   invoiceNumber: string;
@@ -64,7 +61,6 @@ export function POSInterface() {
   const { searchByBarcode } = useProductActions();
   const { createSale, isLoading } = useTransactionActions();
 
-  // Focus barcode input on mount
   useEffect(() => {
     const input = document.getElementById("barcode-input") as HTMLInputElement;
     if (input) input.focus();
@@ -73,9 +69,22 @@ export function POSInterface() {
   // ✅ Get correct price based on member status
   const getPrice = useCallback(
     (product: Product): number => {
-      return memberId
-        ? product.sellingPriceMember
-        : product.sellingPriceGeneral;
+      const price = memberId ? product.sellingPriceMember : product.sellingPriceGeneral;
+
+      // ✅ CRITICAL: Validate price exists and is valid
+      if (!price || isNaN(Number(price)) || Number(price) <= 0) {
+        console.error("❌ Invalid price data:", {
+          productId: product.id,
+          productName: product.name,
+          sellingPriceGeneral: product.sellingPriceGeneral,
+          sellingPriceMember: product.sellingPriceMember,
+          memberId: memberId,
+          selectedPrice: price,
+        });
+        throw new Error(`Harga produk ${product.name} tidak valid`);
+      }
+
+      return Number(price);
     },
     [memberId]
   );
@@ -84,24 +93,27 @@ export function POSInterface() {
   const updateAllPrices = useCallback(() => {
     setCart((prevCart) =>
       prevCart.map((item) => {
-        const newPrice = getPrice(item.product);
-        return {
-          ...item,
-          priceUsed: newPrice,
-          subtotal: newPrice * item.quantity,
-        };
+        try {
+          const newPrice = getPrice(item.product);
+          return {
+            ...item,
+            priceUsed: newPrice,
+            subtotal: newPrice * item.quantity,
+          };
+        } catch (error) {
+          console.error("❌ Error updating price for item:", item.product.name, error);
+          return item; // Keep old price if error
+        }
       })
     );
   }, [getPrice]);
 
-  // Auto-update prices when member changes
   useEffect(() => {
     if (cart.length > 0) {
       updateAllPrices();
     }
   }, [memberId, cart.length, updateAllPrices]);
 
-  // Debounced member search
   useEffect(() => {
     const timer = setTimeout(() => {
       if (memberSearch.length >= 3) {
@@ -115,15 +127,9 @@ export function POSInterface() {
     return () => clearTimeout(timer);
   }, [memberSearch]);
 
-  // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(event.target as Node) &&
-        memberInputRef.current &&
-        !memberInputRef.current.contains(event.target as Node)
-      ) {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node) && memberInputRef.current && !memberInputRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
       }
     };
@@ -135,28 +141,16 @@ export function POSInterface() {
   const searchMembers = async (query: string) => {
     setIsLoadingMembers(true);
     try {
-      // Panggil API dengan proper error handling
-      const response = await apiClient.get<Member[]>(
-        `/members?search=${query}&limit=10`
-      );
+      const response = await apiClient.get<Member[]>(`/members?search=${query}&limit=10`);
 
-      // ✅ Handle berbagai kemungkinan struktur response
       let members: Member[] = [];
 
-      // Case 1: response adalah array langsung
       if (Array.isArray(response)) {
         members = response;
-      }
-      // Case 2: response.data adalah array
-      else if (response && typeof response === "object") {
+      } else if (response && typeof response === "object") {
         if (Array.isArray((response as any).data)) {
           members = (response as any).data;
-        }
-        // Case 3: response.data.data adalah array (nested)
-        else if (
-          (response as any).data &&
-          Array.isArray((response as any).data.data)
-        ) {
+        } else if ((response as any).data && Array.isArray((response as any).data.data)) {
           members = (response as any).data.data;
         }
       }
@@ -180,9 +174,7 @@ export function POSInterface() {
     setMemberSearch("");
     setShowSuggestions(false);
 
-    toast.success(
-      `Member ${member.fullName} dipilih - Harga berubah ke harga member`
-    );
+    toast.success(`Member ${member.fullName} dipilih - Harga berubah ke harga member`);
   };
 
   const handleClearMember = () => {
@@ -205,78 +197,85 @@ export function POSInterface() {
     }
   };
 
-  // ✅ Fix handleBarcodeSubmit - handle response properly
+  // ✅ CRITICAL FIX: Proper response handling for barcode search
   const handleBarcodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!barcode.trim()) return;
 
     try {
-      // searchByBarcode returns the full axios response
-      const response = await searchByBarcode(barcode);
+      console.log("🔍 Searching barcode:", barcode);
 
-      // Extract product from response
-      // Handle multiple possible response structures
-      let product: Product | null = null;
+      // searchByBarcode already extracts data via apiClient
+      const product = await searchByBarcode(barcode);
 
-      // Case 1: response.data.data (nested structure)
-      if (response?.data?.data) {
-        product = response.data.data;
-      }
-      // Case 2: response.data (direct data)
-      else if (response?.data) {
-        product = response.data;
-      }
-      // Case 3: response itself is the product (unlikely but safe)
-      else if (response && typeof response === "object" && "id" in response) {
-        product = response as unknown as Product;
-      }
+      console.log("✅ Barcode search result:", product);
 
-      if (!product || !product.id) {
+      // ✅ Validate product structure
+      if (!product || typeof product !== "object" || !product.id) {
+        console.error("❌ Invalid product data:", product);
         throw new Error("Data produk tidak valid");
+      }
+
+      // ✅ Validate required price fields exist
+      if (!product.sellingPriceGeneral || !product.sellingPriceMember) {
+        console.error("❌ Product missing price fields:", {
+          id: product.id,
+          name: product.name,
+          sellingPriceGeneral: product.sellingPriceGeneral,
+          sellingPriceMember: product.sellingPriceMember,
+        });
+        throw new Error(`Produk ${product.name} tidak memiliki data harga yang lengkap`);
       }
 
       addToCart(product);
       setBarcode("");
       toast.success(`${product.name} ditambahkan ke keranjang`);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Produk tidak ditemukan";
+      console.error("❌ Barcode search error:", error);
+      const message = error instanceof Error ? error.message : "Produk tidak ditemukan";
       toast.error(message);
     }
   };
 
   const addToCart = (product: Product) => {
-    // Validate product data
+    // ✅ Validate product data
     if (!product || !product.id) {
       toast.error("Data produk tidak valid");
       return;
     }
 
-    const price = getPrice(product);
+    try {
+      const price = getPrice(product);
 
-    // Validate price
-    if (isNaN(price) || price <= 0) {
-      toast.error("Harga produk tidak valid");
-      console.error("Invalid price data:", { product, price });
-      return;
-    }
+      console.log("✅ Adding to cart:", {
+        product: product.name,
+        price: price,
+        memberId: memberId,
+        sellingPriceGeneral: product.sellingPriceGeneral,
+        sellingPriceMember: product.sellingPriceMember,
+      });
 
-    const existingItem = cart.find((item) => item.product.id === product.id);
+      const existingItem = cart.find((item) => item.product.id === product.id);
 
-    if (existingItem) {
-      updateQuantity(existingItem.cartId, existingItem.quantity + 1);
-    } else {
-      const cartId = `${product.id}-${Date.now()}`;
-      setCart([
-        ...cart,
-        {
-          cartId,
-          product,
-          quantity: 1,
-          priceUsed: price,
-          subtotal: price,
-        },
-      ]);
+      if (existingItem) {
+        updateQuantity(existingItem.cartId, existingItem.quantity + 1);
+      } else {
+        const cartId = `${product.id}-${Date.now()}`;
+        setCart([
+          ...cart,
+          {
+            cartId,
+            product,
+            quantity: 1,
+            priceUsed: price,
+            subtotal: price,
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("❌ Error adding to cart:", error);
+      const message = error instanceof Error ? error.message : "Gagal menambahkan ke keranjang";
+      toast.error(message);
     }
   };
 
@@ -323,7 +322,7 @@ export function POSInterface() {
     setIsPaymentModalOpen(true);
   };
 
-  // ✅ Fix handlePaymentComplete - handle response properly
+  // ✅ Fix handlePaymentComplete
   const handlePaymentComplete = async (paymentData: PaymentData) => {
     try {
       const saleData = {
@@ -340,37 +339,18 @@ export function POSInterface() {
         notes: paymentData.notes,
       };
 
-      // createSale returns the full axios response
-      const response = await createSale(saleData);
+      const sale = await createSale(saleData);
 
-      // Extract sale from response
-      // Handle multiple possible response structures
-      let sale: SaleResponse | null = null;
+      console.log("✅ Sale created:", sale);
 
-      // Case 1: response.data.data (nested structure)
-      if (response?.data?.data) {
-        sale = response.data.data;
-      }
-      // Case 2: response.data (direct data)
-      else if (response?.data) {
-        sale = response.data;
-      }
-      // Case 3: response itself is the sale (unlikely but safe)
-      else if (response && typeof response === "object" && "id" in response) {
-        sale = response as unknown as SaleResponse;
-      }
-
-      console.log("Sale response:", response);
-      console.log("Sale data:", sale);
-
+      // ✅ Validate sale response
       if (!sale || !sale.id) {
         throw new Error("Sale ID tidak ditemukan dalam response");
       }
 
       setIsPaymentModalOpen(false);
 
-      const baseUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
       let printUrl = "";
 
       if (paymentData.saleType === "TUNAI") {
@@ -389,8 +369,7 @@ export function POSInterface() {
       toast.success(`Transaksi ${sale.invoiceNumber} berhasil!`);
     } catch (error: unknown) {
       console.error("❌ Error creating sale:", error);
-      const message =
-        error instanceof Error ? error.message : "Terjadi kesalahan";
+      const message = error instanceof Error ? error.message : "Terjadi kesalahan";
       toast.error("Transaksi gagal: " + message);
     }
   };
@@ -427,14 +406,7 @@ export function POSInterface() {
         <div className="space-y-2">
           <Label>Scan Barcode</Label>
           <form onSubmit={handleBarcodeSubmit} className="flex gap-2">
-            <Input
-              id="barcode-input"
-              placeholder="Scan atau ketik barcode..."
-              value={barcode}
-              onChange={(e) => setBarcode(e.target.value)}
-              className="flex-1"
-              autoComplete="off"
-            />
+            <Input id="barcode-input" placeholder="Scan atau ketik barcode..." value={barcode} onChange={(e) => setBarcode(e.target.value)} className="flex-1" autoComplete="off" />
             <Button type="submit">
               <Search className="h-4 w-4" />
             </Button>
@@ -442,7 +414,6 @@ export function POSInterface() {
         </div>
         <BarcodeScanner onProductFound={addToCart} />
 
-        {/* Member Autocomplete */}
         <div className="space-y-2 relative">
           <Label>Member (Opsional)</Label>
           {memberId ? (
@@ -461,10 +432,7 @@ export function POSInterface() {
                   value={memberSearch}
                   onChange={(e) => handleMemberInputChange(e.target.value)}
                   onFocus={() => {
-                    if (
-                      memberSearch.length >= 3 &&
-                      memberSuggestions.length > 0
-                    ) {
+                    if (memberSearch.length >= 3 && memberSuggestions.length > 0) {
                       setShowSuggestions(true);
                     }
                   }}
@@ -478,10 +446,7 @@ export function POSInterface() {
               </div>
 
               {showSuggestions && memberSearch.length >= 3 && (
-                <div
-                  ref={suggestionsRef}
-                  className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto"
-                >
+                <div ref={suggestionsRef} className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
                   {isLoadingMembers ? (
                     <div className="p-3 text-sm text-center text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
@@ -490,47 +455,29 @@ export function POSInterface() {
                   ) : memberSuggestions.length > 0 ? (
                     <div className="py-1">
                       {memberSuggestions.map((member) => (
-                        <button
-                          key={member.id}
-                          type="button"
-                          onClick={() => handleMemberSelect(member)}
-                          className="w-full px-3 py-2 text-left hover:bg-accent transition-colors cursor-pointer"
-                        >
+                        <button key={member.id} type="button" onClick={() => handleMemberSelect(member)} className="w-full px-3 py-2 text-left hover:bg-accent transition-colors cursor-pointer">
                           <div className="font-medium text-sm">
                             {member.uniqueId} - {member.fullName}
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {member.regionName}
-                          </div>
+                          <div className="text-xs text-muted-foreground">{member.regionName}</div>
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <div className="p-3 text-sm text-center text-muted-foreground">
-                      Tidak ada member ditemukan
-                    </div>
+                    <div className="p-3 text-sm text-center text-muted-foreground">Tidak ada member ditemukan</div>
                   )}
                 </div>
               )}
             </>
           )}
-          <p className="text-xs text-muted-foreground">
-            {memberId
-              ? "✅ Menggunakan harga member"
-              : "Kosongkan untuk transaksi umum (harga umum)"}
-          </p>
+          <p className="text-xs text-muted-foreground">{memberId ? "✅ Menggunakan harga member" : "Kosongkan untuk transaksi umum (harga umum)"}</p>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label>Keranjang Belanja</Label>
             {cart.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearCart}
-                className="text-destructive"
-              >
+              <Button variant="ghost" size="sm" onClick={clearCart} className="text-destructive">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Kosongkan
               </Button>
@@ -542,25 +489,14 @@ export function POSInterface() {
               <div className="flex h-64 items-center justify-center">
                 <div className="text-center">
                   <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Keranjang masih kosong
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Scan barcode untuk menambah produk
-                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">Keranjang masih kosong</p>
+                  <p className="text-xs text-muted-foreground">Scan barcode untuk menambah produk</p>
                 </div>
               </div>
             ) : (
               <div className="divide-y">
                 {cart.map((item) => (
-                  <CartItem
-                    key={item.cartId}
-                    item={item}
-                    onUpdateQuantity={(productId, quantity) =>
-                      updateQuantity(item.cartId, quantity)
-                    }
-                    onRemove={() => removeFromCart(item.cartId)}
-                  />
+                  <CartItem key={item.cartId} item={item} onUpdateQuantity={(productId, quantity) => updateQuantity(item.cartId, quantity)} onRemove={() => removeFromCart(item.cartId)} />
                 ))}
               </div>
             )}
@@ -583,19 +519,12 @@ export function POSInterface() {
             <div className="border-t pt-2">
               <div className="flex justify-between">
                 <span className="font-semibold">Total</span>
-                <span className="text-xl font-bold text-primary">
-                  {formatCurrency(total)}
-                </span>
+                <span className="text-xl font-bold text-primary">{formatCurrency(total)}</span>
               </div>
             </div>
           </div>
 
-          <Button
-            className="mt-4 w-full"
-            size="lg"
-            onClick={handleCheckout}
-            disabled={cart.length === 0 || isLoading}
-          >
+          <Button className="mt-4 w-full" size="lg" onClick={handleCheckout} disabled={cart.length === 0 || isLoading}>
             <ShoppingCart className="mr-2 h-5 w-5" />
             Checkout ({cart.length} item)
           </Button>
@@ -611,13 +540,7 @@ export function POSInterface() {
         </div>
       </div>
 
-      <PaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        totalAmount={total}
-        hasMember={!!memberId}
-        onConfirm={handlePaymentComplete}
-      />
+      <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} totalAmount={total} hasMember={!!memberId} onConfirm={handlePaymentComplete} />
     </div>
   );
 }

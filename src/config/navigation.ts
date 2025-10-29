@@ -21,6 +21,7 @@ import {
   Building,
   Gift,
   Sliders,
+  DollarSign,
 } from "lucide-react";
 
 export interface NavItem {
@@ -95,6 +96,12 @@ export const NAVIGATION: NavCategory[] = [
         label: "Riwayat Penjualan",
         href: "/dashboard/transaksi/penjualan",
         icon: Receipt,
+        roles: ["ADMIN", "KASIR"],
+      },
+      {
+        label: "Piutang Member",
+        href: "/dashboard/management/piutang",
+        icon: DollarSign,
         roles: ["ADMIN", "KASIR"],
       },
       {
@@ -225,43 +232,11 @@ export const NAVIGATION: NavCategory[] = [
       },
     ],
   },
-  {
-    category: "PENGATURAN",
-    roles: ["ADMIN"],
-    items: [
-      {
-        label: "User Management",
-        href: "/dashboard/settings/users",
-        icon: UserCog,
-        roles: ["ADMIN"],
-      },
-      {
-        label: "Profil Koperasi",
-        href: "/dashboard/settings/profile",
-        icon: Building,
-        roles: ["ADMIN"],
-      },
-      {
-        label: "Setting Point",
-        href: "/dashboard/settings/point",
-        icon: Gift,
-        roles: ["ADMIN"],
-      },
-      {
-        label: "Pengaturan Umum",
-        href: "/dashboard/settings/general",
-        icon: Sliders,
-        roles: ["ADMIN"],
-      },
-    ],
-  },
 ];
 
 export function getNavigationByRole(userRole: string): NavCategory[] {
   return NAVIGATION.map((category) => ({
     ...category,
-    items: category.items.filter(
-      (item) => !item.roles || item.roles.includes(userRole)
-    ),
+    items: category.items.filter((item) => !item.roles || item.roles.includes(userRole)),
   })).filter((category) => category.roles.includes(userRole));
 }
